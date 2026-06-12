@@ -1,0 +1,371 @@
+[
+  {
+    "question": "Pen is to Write as Knife is to ____.",
+    "options": ["Sharpen", "Cut", "Metal", "Kitchen"],
+    "correct_index": 1,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Analogies",
+    "difficulty": "easy",
+    "explanation": "A pen is used to write; analogously, a knife is used to cut."
+  },
+  {
+    "question": "Find the odd one out: Rose, Lotus, Marigold, Mango.",
+    "options": ["Rose", "Lotus", "Marigold", "Mango"],
+    "correct_index": 3,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Classification (Odd One Out)",
+    "difficulty": "easy",
+    "explanation": "Rose, Lotus and Marigold are flowers, whereas Mango is a fruit."
+  },
+  {
+    "question": "Find the next number in the series: 2, 6, 12, 20, 30, ?",
+    "options": ["40", "42", "44", "46"],
+    "correct_index": 1,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Series (Number & Alphabet)",
+    "difficulty": "medium",
+    "explanation": "Differences are 4, 6, 8, 10, 12; so 30 + 12 = 42."
+  },
+  {
+    "question": "If MONDAY is coded as NPOEBZ, how is FRIDAY coded?",
+    "options": ["GSJEBZ", "GSJECZ", "GSKEBZ", "GTJEBZ"],
+    "correct_index": 0,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Coding-Decoding",
+    "difficulty": "medium",
+    "explanation": "Each letter is shifted forward by one, so FRIDAY becomes GSJEBZ."
+  },
+  {
+    "question": "Pointing to a man, a woman said, 'His mother is the only daughter of my mother.' How is the woman related to the man?",
+    "options": ["Mother", "Sister", "Aunt", "Grandmother"],
+    "correct_index": 0,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Blood Relations",
+    "difficulty": "medium",
+    "explanation": "The only daughter of the woman's mother is the woman herself, so she is the man's mother."
+  },
+  {
+    "question": "A man walks 5 km North, turns right and walks 3 km, then turns right and walks 5 km. How far is he from the start?",
+    "options": ["3 km", "5 km", "8 km", "13 km"],
+    "correct_index": 0,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Direction Sense",
+    "difficulty": "medium",
+    "explanation": "The two 5 km vertical legs cancel out, leaving only the 3 km eastward displacement."
+  },
+  {
+    "question": "Statements: All cats are animals. All animals are living. Conclusion: All cats are living.",
+    "options": ["Conclusion follows", "Conclusion does not follow", "Cannot be determined", "Data inadequate"],
+    "correct_index": 0,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Syllogism",
+    "difficulty": "hard",
+    "explanation": "Since all cats are animals and all animals are living, it logically follows that all cats are living."
+  },
+  {
+    "question": "If A means +, B means \u2212, C means \u00d7 and D means \u00f7, then 8 C 4 A 6 B 2 = ?",
+    "options": ["32", "34", "36", "38"],
+    "correct_index": 2,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Mathematical Operations",
+    "difficulty": "medium",
+    "explanation": "Replacing symbols: 8 \u00d7 4 + 6 \u2212 2 = 32 + 6 \u2212 2 = 36."
+  },
+  {
+    "question": "In a row of 40 students, Ravi is 11th from the left. What is his position from the right?",
+    "options": ["29th", "30th", "31st", "28th"],
+    "correct_index": 1,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Ranking & Order",
+    "difficulty": "easy",
+    "explanation": "Position from right = (40 \u2212 11) + 1 = 30th."
+  },
+  {
+    "question": "On a standard die, opposite faces sum to 7. Which number is opposite 3?",
+    "options": ["2", "4", "5", "6"],
+    "correct_index": 1,
+    "subject": "General Intelligence & Reasoning",
+    "topic": "Cubes & Dice",
+    "difficulty": "hard",
+    "explanation": "Opposite faces of a standard die sum to 7, so 3 is opposite 4."
+  },
+  {
+    "question": "What is the place value of 7 in the number 4,768?",
+    "options": ["7", "70", "700", "7000"],
+    "correct_index": 2,
+    "subject": "Quantitative Aptitude",
+    "topic": "Number System",
+    "difficulty": "easy",
+    "explanation": "7 is in the hundreds place, so its place value is 700."
+  },
+  {
+    "question": "Simplify: 12 + 6 \u00f7 2 \u00d7 3 \u2212 4.",
+    "options": ["17", "19", "23", "25"],
+    "correct_index": 0,
+    "subject": "Quantitative Aptitude",
+    "topic": "Simplification (BODMAS, Surds & Indices)",
+    "difficulty": "easy",
+    "explanation": "By BODMAS: 6\u00f72=3, 3\u00d73=9, then 12 + 9 \u2212 4 = 17."
+  },
+  {
+    "question": "What is 15% of 200?",
+    "options": ["20", "25", "30", "35"],
+    "correct_index": 2,
+    "subject": "Quantitative Aptitude",
+    "topic": "Percentage",
+    "difficulty": "easy",
+    "explanation": "15% of 200 = (15/100) \u00d7 200 = 30."
+  },
+  {
+    "question": "If A : B = 2 : 3 and B : C = 4 : 5, then A : C = ?",
+    "options": ["8 : 15", "2 : 5", "6 : 5", "8 : 5"],
+    "correct_index": 0,
+    "subject": "Quantitative Aptitude",
+    "topic": "Ratio & Proportion",
+    "difficulty": "medium",
+    "explanation": "A:B:C = 8:12:15, so A:C = 8:15."
+  },
+  {
+    "question": "The average of 5 consecutive numbers is 18. What is the largest number?",
+    "options": ["18", "19", "20", "22"],
+    "correct_index": 2,
+    "subject": "Quantitative Aptitude",
+    "topic": "Average",
+    "difficulty": "easy",
+    "explanation": "The numbers are 16,17,18,19,20; the average (middle) is 18, so the largest is 20."
+  },
+  {
+    "question": "A shopkeeper marks an item 40% above cost and gives a 25% discount. His profit percent is:",
+    "options": ["5%", "10%", "15%", "20%"],
+    "correct_index": 0,
+    "subject": "Quantitative Aptitude",
+    "topic": "Profit, Loss & Discount",
+    "difficulty": "medium",
+    "explanation": "Let CP = 100, MP = 140, SP = 140 \u00d7 0.75 = 105, so profit = 5%."
+  },
+  {
+    "question": "What is the simple interest on Rs. 5000 at 8% per annum for 2 years?",
+    "options": ["Rs. 600", "Rs. 700", "Rs. 800", "Rs. 900"],
+    "correct_index": 2,
+    "subject": "Quantitative Aptitude",
+    "topic": "Simple & Compound Interest",
+    "difficulty": "medium",
+    "explanation": "SI = (P \u00d7 R \u00d7 T)/100 = (5000 \u00d7 8 \u00d7 2)/100 = Rs. 800."
+  },
+  {
+    "question": "A can do a work in 10 days and B in 15 days. Working together, in how many days will they finish it?",
+    "options": ["5 days", "6 days", "8 days", "12 days"],
+    "correct_index": 1,
+    "subject": "Quantitative Aptitude",
+    "topic": "Time & Work",
+    "difficulty": "medium",
+    "explanation": "Combined rate = 1/10 + 1/15 = 1/6, so they finish in 6 days."
+  },
+  {
+    "question": "A train 150 m long passes a pole in 15 seconds. What is its speed?",
+    "options": ["10 m/s", "15 m/s", "20 m/s", "25 m/s"],
+    "correct_index": 0,
+    "subject": "Quantitative Aptitude",
+    "topic": "Time, Speed & Distance",
+    "difficulty": "medium",
+    "explanation": "Speed = distance/time = 150/15 = 10 m/s."
+  },
+  {
+    "question": "A boat goes 20 km downstream in 2 hours and the stream speed is 3 km/h. What is the boat's speed in still water?",
+    "options": ["7 km/h", "8 km/h", "10 km/h", "13 km/h"],
+    "correct_index": 0,
+    "subject": "Quantitative Aptitude",
+    "topic": "Trains, Boats & Streams",
+    "difficulty": "medium",
+    "explanation": "Downstream speed = 20/2 = 10 km/h; still water speed = 10 \u2212 3 = 7 km/h."
+  },
+  {
+    "question": "What is the area of a circle with radius 7 cm? (Use \u03c0 = 22/7)",
+    "options": ["144 cm\u00b2", "154 cm\u00b2", "164 cm\u00b2", "174 cm\u00b2"],
+    "correct_index": 1,
+    "subject": "Quantitative Aptitude",
+    "topic": "Mensuration (2D & 3D)",
+    "difficulty": "hard",
+    "explanation": "Area = \u03c0r\u00b2 = (22/7) \u00d7 49 = 154 cm\u00b2."
+  },
+  {
+    "question": "If x + 1/x = 3, what is the value of x\u00b2 + 1/x\u00b2?",
+    "options": ["5", "7", "9", "11"],
+    "correct_index": 1,
+    "subject": "Quantitative Aptitude",
+    "topic": "Algebra",
+    "difficulty": "hard",
+    "explanation": "x\u00b2 + 1/x\u00b2 = (x + 1/x)\u00b2 \u2212 2 = 9 \u2212 2 = 7."
+  },
+  {
+    "question": "Choose the correct synonym of 'Abundant'.",
+    "options": ["Scarce", "Plentiful", "Empty", "Rare"],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "Synonyms",
+    "difficulty": "easy",
+    "explanation": "'Abundant' means existing in large quantities, i.e. plentiful."
+  },
+  {
+    "question": "Choose the correct antonym of 'Benevolent'.",
+    "options": ["Kind", "Generous", "Cruel", "Friendly"],
+    "correct_index": 2,
+    "subject": "English Comprehension",
+    "topic": "Antonyms",
+    "difficulty": "easy",
+    "explanation": "'Benevolent' means kind and well-meaning; its antonym is 'cruel'."
+  },
+  {
+    "question": "Spot the error: 'He do not like coffee.'",
+    "options": ["He", "do not", "like", "coffee"],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "Spotting Errors",
+    "difficulty": "medium",
+    "explanation": "The subject 'He' is singular, so it should be 'does not', not 'do not'."
+  },
+  {
+    "question": "One word for 'a person who eats too much':",
+    "options": ["Gourmet", "Glutton", "Gourmand", "Epicure"],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "One Word Substitution",
+    "difficulty": "medium",
+    "explanation": "A 'glutton' is a person who eats too much."
+  },
+  {
+    "question": "What does the idiom 'to bite the bullet' mean?",
+    "options": ["To get injured", "To face a difficult situation bravely", "To eat quickly", "To remain silent"],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "Idioms & Phrases",
+    "difficulty": "medium",
+    "explanation": "'To bite the bullet' means to endure or face a painful or difficult situation with courage."
+  },
+  {
+    "question": "Fill in the blank: 'She has been working here ____ 2010.'",
+    "options": ["for", "since", "from", "by"],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "Fill in the Blanks",
+    "difficulty": "easy",
+    "explanation": "'Since' is used with a point in time (2010), while 'for' is used with a duration."
+  },
+  {
+    "question": "Change to passive voice: 'The chef cooked a meal.'",
+    "options": ["A meal is cooked by the chef.", "A meal was cooked by the chef.", "A meal has cooked by the chef.", "A meal cooked the chef."],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "Active & Passive Voice",
+    "difficulty": "medium",
+    "explanation": "Past tense active 'cooked' becomes 'was cooked' in the passive voice."
+  },
+  {
+    "question": "Choose the correctly spelt word.",
+    "options": ["Accomodation", "Accommodation", "Acommodation", "Accommadation"],
+    "correct_index": 1,
+    "subject": "English Comprehension",
+    "topic": "Spelling Correction",
+    "difficulty": "easy",
+    "explanation": "'Accommodation' has double 'c' and double 'm'."
+  },
+  {
+    "question": "Identify the part of speech of the underlined word: 'She sings beautifully.'",
+    "options": ["Noun", "Verb", "Adverb", "Adjective"],
+    "correct_index": 2,
+    "subject": "English Comprehension",
+    "topic": "Spotting Errors",
+    "difficulty": "easy",
+    "explanation": "'Beautifully' modifies the verb 'sings', so it is an adverb."
+  },
+  {
+    "question": "Who was the first President of India?",
+    "options": ["Dr. Rajendra Prasad", "Jawaharlal Nehru", "Sardar Patel", "Dr. S. Radhakrishnan"],
+    "correct_index": 0,
+    "subject": "General Awareness",
+    "topic": "Indian Polity",
+    "difficulty": "easy",
+    "explanation": "Dr. Rajendra Prasad served as the first President of India from 1950 to 1962."
+  },
+  {
+    "question": "The Quit India Movement was launched in which year?",
+    "options": ["1930", "1942", "1945", "1947"],
+    "correct_index": 1,
+    "subject": "General Awareness",
+    "topic": "History",
+    "difficulty": "medium",
+    "explanation": "The Quit India Movement was launched by Mahatma Gandhi on 8 August 1942."
+  },
+  {
+    "question": "Which river is known as the 'Sorrow of Bihar'?",
+    "options": ["Ganga", "Kosi", "Yamuna", "Son"],
+    "correct_index": 1,
+    "subject": "General Awareness",
+    "topic": "Geography",
+    "difficulty": "medium",
+    "explanation": "The Kosi river is called the 'Sorrow of Bihar' due to its frequent devastating floods."
+  },
+  {
+    "question": "Which body regulates monetary policy in India?",
+    "options": ["SEBI", "RBI", "NABARD", "Finance Ministry"],
+    "correct_index": 1,
+    "subject": "General Awareness",
+    "topic": "Economics",
+    "difficulty": "easy",
+    "explanation": "The Reserve Bank of India (RBI) formulates and implements monetary policy."
+  },
+  {
+    "question": "What is the SI unit of electric current?",
+    "options": ["Volt", "Watt", "Ampere", "Ohm"],
+    "correct_index": 2,
+    "subject": "General Awareness",
+    "topic": "Physics",
+    "difficulty": "medium",
+    "explanation": "The ampere (A) is the SI base unit of electric current."
+  },
+  {
+    "question": "What is the chemical symbol for gold?",
+    "options": ["Gd", "Go", "Au", "Ag"],
+    "correct_index": 2,
+    "subject": "General Awareness",
+    "topic": "Chemistry",
+    "difficulty": "easy",
+    "explanation": "Gold's chemical symbol is 'Au', from its Latin name 'aurum'."
+  },
+  {
+    "question": "Which organ in the human body produces insulin?",
+    "options": ["Liver", "Kidney", "Pancreas", "Heart"],
+    "correct_index": 2,
+    "subject": "General Awareness",
+    "topic": "Biology",
+    "difficulty": "easy",
+    "explanation": "Insulin is produced by the beta cells of the pancreas."
+  },
+  {
+    "question": "Which is the largest planet in the solar system?",
+    "options": ["Saturn", "Jupiter", "Neptune", "Earth"],
+    "correct_index": 1,
+    "subject": "General Awareness",
+    "topic": "Static GK",
+    "difficulty": "medium",
+    "explanation": "Jupiter is the largest planet in the solar system by both diameter and mass."
+  },
+  {
+    "question": "What does 'CPU' stand for?",
+    "options": ["Central Processing Unit", "Central Print Unit", "Computer Personal Unit", "Control Processing Unit"],
+    "correct_index": 0,
+    "subject": "General Awareness",
+    "topic": "Computer Knowledge",
+    "difficulty": "easy",
+    "explanation": "CPU stands for Central Processing Unit, the primary component that executes instructions."
+  },
+  {
+    "question": "Article 370 of the Indian Constitution was related to which region?",
+    "options": ["Nagaland", "Jammu & Kashmir", "Sikkim", "Mizoram"],
+    "correct_index": 1,
+    "subject": "General Awareness",
+    "topic": "Indian Polity",
+    "difficulty": "hard",
+    "explanation": "Article 370 granted special autonomous status to Jammu & Kashmir until its abrogation in 2019."
+  }
+]

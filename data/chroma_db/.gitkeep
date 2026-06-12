@@ -1,0 +1,2 @@
+# Prebuilt ChromaDB vector index is generated here by scripts/chunk_and_embed.py.
+# Embedded store (SQLite + Parquet) — no separate server/project needed.

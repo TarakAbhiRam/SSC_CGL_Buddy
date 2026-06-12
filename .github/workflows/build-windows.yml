@@ -1,0 +1,48 @@
+name: Build Windows EXE
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["main"]
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller==6.10.0
+
+      - name: Build EXE
+        run: >
+          pyinstaller --noconfirm --windowed --onedir
+          --name "CGL Buddy"
+          --add-data "frontend;frontend"
+          --add-data "data;data"
+          --collect-data webview
+          main.py
+
+      - name: Zip distributable
+        run: Compress-Archive -Path "dist/CGL Buddy/*" -DestinationPath CGL_Buddy_Windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CGL_Buddy_Windows
+          path: CGL_Buddy_Windows.zip
+          retention-days: 30

@@ -1,0 +1,62 @@
+# --- Secrets / local config (NEVER commit) ---
+config.json
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.token
+secrets.*
+*.secret
+
+# Runtime state created by local/dev runs
+sessions.json
+chroma_db_user/
+*.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+
+# --- Virtual envs ---
+venv/
+.venv/
+env/
+
+# --- PyInstaller build output ---
+build/*/
+!build/.gitkeep
+dist/
+*.spec
+*.app/
+*.dmg
+*.pkg
+*.exe
+*.zip
+
+# --- Embedding model cache (downloaded on first run; large) ---
+.cache/
+models/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Data: keep folder structure, ignore heavy generated artifacts ---
+# Source PDFs are dev-only and can be large.
+data/pdfs/*
+!data/pdfs/.gitkeep
+# Prebuilt vector index can be large -> consider Git LFS or build-in-CI.
+# Comment the next two lines if you DO want to commit the prebuilt index.
+data/chroma_db/*
+!data/chroma_db/.gitkeep

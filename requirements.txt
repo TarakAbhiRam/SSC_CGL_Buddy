@@ -1,0 +1,21 @@
+# --- App runtime ---
+pywebview==5.3.2          # native desktop window wrapping local HTML/JS
+
+# --- PDF parsing ---
+PyMuPDF==1.24.9                # 'fitz' - digital PDF text extraction
+
+# --- LLM providers ---
+google-generativeai==0.8.6     # Gemini (>=0.8.3 needed for gemini-2.5-flash)
+groq==1.4.0                    # Groq (>=0.11 needed for httpx 0.28 compatibility)
+
+# --- Utilities ---
+tenacity==8.5.0                # retry/backoff for LLM calls
+
+# --- Legacy / optional RAG stack (not part of the lightweight app runtime) ---
+# sentence-transformers==3.0.1 # local embedding model for old PDF-reference RAG
+# chromadb==0.5.5              # vector store for old PDF-reference RAG
+# pillow==10.4.0               # only needed if a future local OCR path uses PIL
+# pytesseract==0.3.13          # optional local OCR; also requires Tesseract binary
+
+# --- Packaging (build machines only; not needed at runtime) ---
+# pyinstaller==6.10.0          # install separately on the build machine

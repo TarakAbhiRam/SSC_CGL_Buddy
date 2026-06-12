@@ -1,0 +1,2 @@
+# Place source PYQ PDFs here (dev only — not committed, not shipped).
+# The offline prep pipeline (scripts/) reads from this folder.
