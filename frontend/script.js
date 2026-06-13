@@ -109,12 +109,20 @@
       }
       const cats = await api().list_categories();
       const sel = $("category");
+      const pdfSel = $("pdf-subject");
       sel.innerHTML = "";
+      pdfSel.innerHTML = "";
       cats.forEach((c) => {
         const opt = document.createElement("option");
         opt.value = c;
         opt.textContent = c === "All" ? "All subjects (full mock)" : c;
         sel.appendChild(opt);
+        if (c !== "All") {
+          const pdfOpt = document.createElement("option");
+          pdfOpt.value = c;
+          pdfOpt.textContent = c;
+          pdfSel.appendChild(pdfOpt);
+        }
       });
       renderTopics();
     } catch (e) {
@@ -126,8 +134,14 @@
   // `preselect` is an optional array of topic names to tick.
   function renderTopics(preselect) {
     const subject = $("category").value;
+    const mode = $("mode") ? $("mode").value : "bank";
     const field = $("topics-field");
     const list = $("topics-list");
+    if (mode === "pdf") {
+      list.innerHTML = "";
+      field.style.display = "none";
+      return;
+    }
     const topics = (subject && subject !== "All" && state.syllabus[subject]) || [];
     list.innerHTML = "";
     if (!topics.length) {
@@ -165,7 +179,7 @@
       if (last.difficulty) $("difficulty").value = last.difficulty;
       if (last.num_questions) $("num-questions").value = last.num_questions;
       if (last.duration_minutes) $("duration").value = last.duration_minutes;
-      if (last.mode) $("mode").value = last.mode;
+      if ([...$("mode").options].some((opt) => opt.value === last.mode)) $("mode").value = last.mode;
       // Re-render topic checkboxes for the restored subject and re-tick saved ones.
       renderTopics(Array.isArray(last.topics) ? last.topics : []);
       if (s.active_provider) $("active-provider").value = s.active_provider;
@@ -218,12 +232,12 @@
   function updateModeHint() {
     const mode = $("mode").value;
     const hint = $("mode-hint");
-    if (mode === "bank") hint.textContent = "Bank mode works offline using prebuilt questions.";
-    else if (mode === "live") hint.textContent = "Live mode generates fresh questions with AI (API key required).";
-    else hint.textContent = "Mixed mode combines bank questions with AI-generated ones (API key required).";
+    if (mode === "bank") hint.textContent = "Bank + images uses built-in questions and tagged image imports.";
+    else if (mode === "pdf") hint.textContent = "PDF mode uses only questions imported from subject-wise PDFs.";
+    else hint.textContent = "AI mode generates fresh questions with the selected provider.";
 
     // Show the provider switcher only when AI is involved.
-    const needsAI = mode === "live" || mode === "mixed";
+    const needsAI = mode === "live";
     const field = $("provider-field");
     const phint = $("provider-hint");
     const available = ["gemini", "groq"].filter((p) => state.keys && state.keys[p]);
@@ -263,16 +277,16 @@
         mode: $("mode").value,
         category: $("category").value,
         difficulty: $("difficulty").value,
-        topics: selectedTopics(),
+        topics: $("mode").value === "pdf" ? [] : selectedTopics(),
         num_questions: parseInt($("num-questions").value, 10) || 10,
         duration_minutes: parseInt($("duration").value, 10) || 15,
         provider: $("setup-provider").value || $("active-provider").value,
       };
-      // Live/mixed modes call the selected AI provider directly. The old local
+      // AI mode calls the selected provider directly. The old local
       // embedding preload is intentionally skipped to keep memory usage low.
-      if (options.mode === "live" || options.mode === "mixed") {
+      if (options.mode === "live") {
         if (!options.provider) {
-          banner("setup-banner", "No API key saved. Add a Groq or Gemini key in Settings, or use Bank mode.", "warn");
+          banner("setup-banner", "No API key saved. Add a Groq or Gemini key in Settings, or use Bank + images mode.", "warn");
           return;
         }
       }
@@ -712,14 +726,20 @@
     try {
       const path = await api().pick_pdf();
       if (!path) return;
+      const subject = $("pdf-subject").value;
+      if (!subject) {
+        status.textContent = "Choose the subject for this PDF first.";
+        status.className = "import-status error";
+        return;
+      }
       status.className = "hint";
       status.innerHTML = '<span class="spinner"></span> Reading PDF into question bank…';
-      const res = await api().import_questions(path);
+      const res = await api().import_questions(path, { subject });
       if (res.ok) {
         const added = res.added || 0;
         let msg = `Added ${added} question${added === 1 ? "" : "s"} from ${res.source} to the bank`;
         if (res.skipped) msg += ` (skipped ${res.skipped} duplicate/invalid)`;
-        msg += `. Find them in Database → Browse questions under "Imported (scan/image)".`;
+        msg += `. Find them in Database → Browse questions under "Imported PDF" and practise them with PDF mode.`;
         status.textContent = msg;
       } else {
         status.textContent = res.error || "Upload failed.";
@@ -749,7 +769,7 @@
         let msg = `Imported ${added} new question${added === 1 ? "" : "s"} from ${res.source}`;
         if (res.skipped) msg += ` (skipped ${res.skipped} duplicate/invalid)`;
         if (res.pages_failed) msg += `; ${res.pages_failed} page(s) failed`;
-        msg += ". Find them in the Database screen under \"Imported (scan/image)\".";
+        msg += ". Find them in the Database screen under \"Imported image\"; they are included in Bank + images mode.";
         status.textContent = msg;
         status.className = res.quota_exhausted ? "import-status warn" : "hint";
         if (res.quota_exhausted) {
@@ -871,7 +891,7 @@
       const topics = Array.isArray(s.topics) && s.topics.length
         ? s.topics.join(", ")
         : "All topics";
-      const modeLabel = { bank: "Bank", live: "Live AI", mixed: "Mixed" }[s.mode] || s.mode || "Bank";
+      const modeLabel = { bank: "Bank + images", live: "AI", pdf: "PDF" }[s.mode] || s.mode || "Bank + images";
       const diff = s.difficulty && s.difficulty !== "All" ? s.difficulty : "All levels";
       const da = s.difficulty_accuracy || {};
       const chip = (lvl, label) => {
@@ -905,7 +925,7 @@
     const s = state.sessions[idx];
     if (!s || !Array.isArray(s.questions) || !s.questions.length) return;
     $("attempt-title").textContent = `${subjectLabel(s.subject)} — ${s.score}/${s.total} (${s.accuracy}%)`;
-    const modeLabel = { bank: "Bank", live: "Live AI", mixed: "Mixed" }[s.mode] || s.mode || "Bank";
+    const modeLabel = { bank: "Bank + images", live: "AI", pdf: "PDF" }[s.mode] || s.mode || "Bank + images";
     $("attempt-meta").textContent =
       `${fmtDate(s.timestamp)} · ${modeLabel} · ${fmtDuration(s.time_taken_seconds)} taken`;
     $("attempt-questions").innerHTML = reviewItemsHtml(s.questions, (q) => q.subject);
@@ -1127,7 +1147,7 @@
   function bind() {
     $("theme-toggle-btn").addEventListener("click", toggleTheme);
     $("start-btn").addEventListener("click", startQuiz);
-    $("mode").addEventListener("change", updateModeHint);
+    $("mode").addEventListener("change", () => { updateModeHint(); renderTopics(); });
     $("category").addEventListener("change", () => renderTopics());
     $("topics-all").addEventListener("click", () => setAllTopics(true));
     $("topics-none").addEventListener("click", () => setAllTopics(false));

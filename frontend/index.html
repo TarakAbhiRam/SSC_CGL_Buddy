@@ -32,7 +32,7 @@
         <div class="section-head">
           <div>
             <h2>Configure your quiz</h2>
-            <p class="hint">Choose a subject, source, and timing. Imported questions are included in Bank and Mixed modes.</p>
+            <p class="hint">Choose a subject, source, and timing. Bank + images uses tagged questions; PDF imports stay separate.</p>
           </div>
         </div>
         <div id="setup-banner"></div>
@@ -76,11 +76,11 @@
         <div class="field">
           <label for="mode">Question source</label>
           <select id="mode">
-            <option value="bank">Built-in bank (no API key needed)</option>
-            <option value="live">Live AI generation (needs API key)</option>
-            <option value="mixed">Mixed (bank + AI)</option>
+            <option value="bank">Bank + images (no API key needed)</option>
+            <option value="pdf">Imported PDFs</option>
+            <option value="live">AI generation (needs API key)</option>
           </select>
-          <p class="hint" id="mode-hint">Bank mode works offline using prebuilt questions.</p>
+          <p class="hint" id="mode-hint">Bank + images mode works offline using built-in and image-imported questions.</p>
         </div>
         <div class="field" id="provider-field" style="display:none;">
           <label for="setup-provider">AI provider</label>
@@ -103,8 +103,10 @@
           <div class="tool-tile">
             <div>
               <h3>From PDF</h3>
-              <p class="hint">Best for digital PDFs with selectable text and an answer key.</p>
+              <p class="hint">Best for subject-wise digital PDFs with selectable text and an answer key.</p>
             </div>
+            <label class="mini-field" for="pdf-subject">PDF subject</label>
+            <select id="pdf-subject"></select>
             <button id="upload-btn" class="secondary">Choose PDF…</button>
             <div id="upload-status" class="hint tool-status"></div>
           </div>
@@ -124,10 +126,10 @@
             <div>
               <h4>PDF import</h4>
               <ul>
-                <li>Use digital PDFs where text can be selected.</li>
+                <li>Use subject-wise digital PDFs where text can be selected.</li>
                 <li>Each question needs exactly four options.</li>
                 <li>Each question needs an answer marker like <strong>Ans. (b)</strong>, <strong>Answer: B</strong>, or <strong>Correct answer: 2</strong>.</li>
-                <li>Scanned PDFs should be converted/imported page-by-page as images.</li>
+                <li>PDF questions use the selected subject and stay in the Imported PDFs exam source.</li>
               </ul>
             </div>
             <div>
@@ -349,7 +351,7 @@
         </div>
         <div class="key-status" id="gemini-status"></div>
       </div>
-      <p class="hint">Keys are stored locally on your computer only. Bank mode needs no key.</p>
+      <p class="hint">Keys are stored locally on your computer only. Bank + images mode needs no key.</p>
       <div class="field toggle-field">
         <label class="toggle">
           <input type="checkbox" id="auto-save-ai" />

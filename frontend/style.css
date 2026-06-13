@@ -297,6 +297,21 @@ button.compact { padding: 8px 12px; }
 .tool-tile h3 { font-size: 1rem; margin-bottom: 4px; }
 .tool-tile button { justify-self: start; }
 .tool-status { min-height: 1.25rem; margin-top: 0; }
+.mini-field {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  margin-bottom: -8px;
+}
+.tool-tile select {
+  width: 100%;
+  padding: 9px 10px;
+  background: var(--field-bg);
+  border: 1px solid rgba(var(--primary-rgb), 0.24);
+  border-radius: 8px;
+  color: var(--text);
+}
 .help-box {
   margin-top: 16px;
   padding: 14px 16px;

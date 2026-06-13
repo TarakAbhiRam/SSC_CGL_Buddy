@@ -1,12 +1,14 @@
 # CGL Buddy
 
 CGL Buddy is your SSC CGL practice companion: a lightweight desktop app for
-macOS and Windows that helps aspirants import PDF questions, generate fresh
-AI MCQs, take timed quizzes, and track performance.
+macOS and Windows that helps aspirants practise from the built-in bank, import
+subject-wise PDF questions, generate fresh AI MCQs, take timed quizzes, and
+track performance.
 
 It ships with a built-in question bank, can import ready-made MCQs from digital
-PDFs, and can optionally generate fresh SSC CGL-style questions through Groq or
-Gemini when the user adds an API key.
+PDFs into a separate PDF practice source, includes tagged image imports with the
+normal bank, and can optionally generate fresh SSC CGL-style questions through
+Groq or Gemini when the user adds an API key.
 
 The app is intentionally kept light: the normal runtime does **not** load a local
 embedding model, PyTorch, or ChromaDB. PDFs are parsed directly into bank questions
@@ -25,17 +27,18 @@ architecture, build instructions, and distribution notes live here.
   - **Windows**: double-click **`CGL Buddy.exe`**.
    - If Windows shows a blue "Windows protected your PC" box: click **More info → Run anyway**
      (the app is safe; it just isn't code-signed).
-3. Pick a topic, difficulty, number of questions, and a time limit. Start the quiz.
-4. **API key is optional.** Without one you can use the built-in/imported question bank.
+3. Pick a subject, source, difficulty, number of questions, and a time limit. Start the quiz.
+4. **API key is optional.** Without one you can use Bank + images mode or PDF mode.
    With one, the app can generate brand-new questions or read MCQs from images.
 
 ### Importing Your Own Questions
 
 - **Digital PDF with selectable text**: use **Add questions from PDF**. The app parses
-  question text, four options, and the marked answer directly into the question bank.
-  No API key is needed.
+  question text, four options, and the marked answer. Choose the PDF's subject first;
+  those questions stay in the separate **Imported PDFs** exam source. No API key is needed.
 - **Image / screenshot of MCQs**: use **Import questions from image**. This uses Gemini
-  vision OCR, so it needs a Gemini API key and is subject to Gemini quota limits.
+  vision OCR, so it needs a Gemini API key and is subject to Gemini quota limits. Image
+  imports are tagged by Gemini and included in **Bank + images** mode.
 
 PDF import expects each question to include four options and a detectable answer such as
 `Ans. (b)`, `Answer: B`, or `Correct answer: 2`. Questions without an answer are skipped
@@ -95,9 +98,9 @@ build/             build_mac.sh, build_win.bat
 
 Core app goals:
 - Desktop app for SSC CGL MCQ practice on macOS and Windows.
-- Bank mode works without any API key.
-- Users can import ready-made questions from digital PDFs into the local bank.
-- Users can import questions from images through Gemini vision OCR.
+- Bank + images mode works without any API key after image imports are saved.
+- Users can import subject-wise digital PDFs into a separate PDF practice source.
+- Users can import tagged questions from images through Gemini vision OCR.
 - Users can optionally generate fresh SSC CGL-style questions through Groq/Gemini.
 - Timed quiz, per-question answer tracking, session history, charts, and review screen.
 
@@ -129,6 +132,7 @@ python scripts/build_mcq_bank.py     # pre-generate MCQ pool -> data/mcq_bank.js
 - LLM calls use retries/backoff and validate MCQ shape before questions reach the quiz.
 - `backend/question_store.py` stores imported/generated questions in the user data dir.
 - Built-in questions are read-only; user/imported/generated questions are deletable.
+- Quiz sources are intentionally separate: Bank + images, Imported PDFs, and AI generation.
 - API keys and user settings are stored locally, not sent anywhere except to the selected provider.
 - Use `pathlib`/bundled path helpers so the same code works under PyInstaller on macOS/Windows.
 
@@ -183,8 +187,8 @@ the main source of high RAM and large package size.
 
 - `python -m tests.smoke` passes.
 - App launches locally with `python main.py`.
-- Bank quiz works with no API key.
-- PDF import adds questions to Database → Browse questions.
+- Bank + images quiz works with no API key.
+- PDF import adds subject-tagged questions to Database → Browse questions and PDF mode.
 - Image import shows a clear Gemini quota/API-key message when needed.
 - Groq/Gemini key testing works from Settings.
 - macOS and Windows build artifacts include `frontend/` and `data/`.

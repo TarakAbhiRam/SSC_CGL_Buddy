@@ -8,6 +8,7 @@ any network, API key, or the embedding model.
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -131,6 +132,42 @@ def test_question_store_dedup():
         removed = question_store.delete_by_source(src)
         # After the single delete there may be 0 left; cleanup must not error.
         assert removed >= 0
+
+
+def test_pdf_imports_are_separate_from_bank_images():
+    """Bank + images includes tagged image imports, while PDF imports stay separate."""
+    subject = "__smoke__ source split"
+    pdf_q = {
+        "question": "__smoke__ pdf-only question?",
+        "options": ["a", "b", "c", "d"],
+        "correct_index": 0,
+        "subject": subject,
+        "difficulty": "medium",
+        "explanation": "",
+    }
+    image_q = {
+        "question": "__smoke__ image-bank question?",
+        "options": ["a", "b", "c", "d"],
+        "correct_index": 1,
+        "subject": subject,
+        "topic": "Tagged topic",
+        "difficulty": "easy",
+        "explanation": "",
+    }
+    original_store_path = question_store._store_path  # noqa: SLF001
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_store = Path(tmpdir) / "user_mcq.json"
+        try:
+            question_store._store_path = lambda: temp_store  # noqa: SLF001
+            question_store.add_questions([pdf_q], source=mcq_bank.PDF_IMPORT_SOURCE)
+            question_store.add_questions([image_q], source=mcq_bank.IMAGE_IMPORT_SOURCE)
+
+            bank_questions = mcq_bank.sample_questions(10, subject=subject, source="bank", seed=1)
+            pdf_questions = mcq_bank.sample_questions(10, subject=subject, source="pdf", seed=1)
+            assert [q["question"] for q in bank_questions] == [image_q["question"]]
+            assert [q["question"] for q in pdf_questions] == [pdf_q["question"]]
+        finally:
+            question_store._store_path = original_store_path  # noqa: SLF001
 
 
 def test_pdf_text_mcq_parser():

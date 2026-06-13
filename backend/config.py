@@ -20,7 +20,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "active_provider": "groq",
     "auto_save_ai": False,   # auto-persist AI-generated questions to the bank
     "last_settings": {
-        "mode": "bank",          # bank | live | mixed
+        "mode": "bank",          # bank | live | pdf
         "category": "All",
         "difficulty": "All",     # All | easy | medium | hard
         "topics": [],            # selected subtopics within the subject

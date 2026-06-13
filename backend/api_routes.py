@@ -120,11 +120,11 @@ class Api:
         api_key = config.get_api_key(provider)
         mode = options.get("mode", "bank")
 
-        if mode in ("live", "mixed") and not api_key:
+        if mode == "live" and not api_key:
             log.warning("start_quiz blocked: %s mode needs a %s key", mode, provider)
             return {
                 "ok": False,
-                "error": f"{provider} API key required for {mode} mode. Add it in Settings or use Bank mode.",
+                "error": f"{provider} API key required for AI mode. Add it in Settings or use Bank + images mode.",
             }
 
         category = options.get("category") or "All"
@@ -332,9 +332,10 @@ class Api:
 
     # --- Scanned / image question import (Gemini vision) --------------------
 
-    _IMPORT_SOURCE = "Imported (scan/image)"
+    _PDF_SOURCE = mcq_bank.PDF_IMPORT_SOURCE
+    _IMAGE_SOURCE = mcq_bank.IMAGE_IMPORT_SOURCE
 
-    def import_questions(self, file_path: str) -> Dict[str, Any]:
+    def import_questions(self, file_path: str, options: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Add MCQs from a file to the writable bank (deduped), tagged with a
         dedicated source.
 
@@ -345,12 +346,16 @@ class Api:
           needs a Gemini API key.
         """
         path = Path(file_path)
+        options = options or {}
         if not path.exists():
             return {"ok": False, "error": "File not found."}
         ext = path.suffix.lower()
 
         # --- PDF: free, offline text parsing -------------------------------
         if ext == ".pdf":
+            subject = options.get("subject") or ""
+            if not syllabus.is_subject(subject):
+                return {"ok": False, "error": "Choose the subject for this PDF before importing."}
             try:
                 records = pdf_processor.parse_mcqs_from_pdf(path)
             except pdf_processor.ImportTooLarge as exc:
@@ -368,7 +373,12 @@ class Api:
                         "page as an image instead."
                     ),
                 }
-            result = question_store.add_questions(records, source=self._IMPORT_SOURCE)
+            for rec in records:
+                rec["subject"] = subject
+                rec["category"] = subject
+                rec["topic"] = ""
+                rec["difficulty"] = rec.get("difficulty") or "medium"
+            result = question_store.add_questions(records, source=self._PDF_SOURCE)
             log.info(
                 "import_questions(pdf) %s: found %d, added %d, skipped %d",
                 path.name, len(records), result["added"], result["skipped"],
@@ -423,7 +433,7 @@ class Api:
                 msg = "No complete questions could be read from that image."
             return {"ok": False, "error": msg, "quota_exhausted": quota_hit}
 
-        result = question_store.add_questions(records, source=self._IMPORT_SOURCE)
+        result = question_store.add_questions(records, source=self._IMAGE_SOURCE)
         log.info(
             "import_questions(image) %s: found %d, added %d, skipped %d",
             path.name, len(records), result["added"], result["skipped"],

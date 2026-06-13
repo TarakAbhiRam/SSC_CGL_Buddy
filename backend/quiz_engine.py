@@ -86,15 +86,15 @@ def build_quiz(
 
     bank_count = num_questions
     live_count = 0
+    bank_source = "bank"
     if mode == "live":
         bank_count, live_count = 0, num_questions
-    elif mode == "mixed":
-        live_count = num_questions // 2
-        bank_count = num_questions - live_count
+    elif mode == "pdf":
+        bank_source = "pdf"
 
     # --- Bank portion ---
     if bank_count > 0:
-        for q in mcq_bank.sample_questions(bank_count, category, difficulty, topics):
+        for q in mcq_bank.sample_questions(bank_count, category, difficulty, topics, source=bank_source):
             item = dict(q)
             item["id"] = _new_id()
             item["origin"] = "bank"

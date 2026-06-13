@@ -1,7 +1,7 @@
 """Load + sample/filter the prebuilt MCQ bank shipped with the app.
 
 The bank is a JSON array of MCQs in the same schema produced by
-``backend.llm_client.parse_mcqs``. Bank mode needs **no API key**.
+``backend.llm_client.parse_mcqs``. Bank + images mode needs **no API key**.
 """
 
 from __future__ import annotations
@@ -12,6 +12,10 @@ import threading
 from typing import Any, Dict, List, Optional
 
 from .paths import bundled_mcq_bank
+
+IMAGE_IMPORT_SOURCE = "Imported image"
+PDF_IMPORT_SOURCE = "Imported PDF"
+LEGACY_IMPORT_SOURCE = "Imported (scan/image)"
 
 _lock = threading.Lock()
 _bank_cache: Optional[List[Dict[str, Any]]] = None
@@ -44,6 +48,26 @@ def bundled_questions() -> List[Dict[str, Any]]:
     return list(_load_bank())
 
 
+def _stored_questions_for_bank(include_pdf: bool = False) -> List[Dict[str, Any]]:
+    """Writable questions eligible for a quiz source.
+
+    Bank + images mode intentionally includes image imports because Gemini tags
+    them into the same subject/topic shape as the bundled bank. PDF imports are
+    kept separate because they are batch-tagged only by subject.
+    """
+    try:
+        from . import question_store
+        questions = question_store.all_questions()
+    except Exception:
+        return []
+    if include_pdf:
+        return [q for q in questions if q.get("source") == PDF_IMPORT_SOURCE]
+    return [
+        q for q in questions
+        if q.get("source") in (IMAGE_IMPORT_SOURCE, LEGACY_IMPORT_SOURCE)
+    ]
+
+
 def _all_questions() -> List[Dict[str, Any]]:
     """Bundled bank merged with the user's writable question store.
 
@@ -51,13 +75,7 @@ def _all_questions() -> List[Dict[str, Any]]:
     quizzes. Imported lazily to avoid a circular import (question_store dedups
     against this module).
     """
-    questions = list(_load_bank())
-    try:
-        from . import question_store
-        questions = questions + question_store.all_questions()
-    except Exception:
-        pass
-    return questions
+    return list(_load_bank()) + _stored_questions_for_bank(include_pdf=False)
 
 
 def list_categories() -> List[str]:
@@ -80,8 +98,14 @@ def count(
     subject: Optional[str] = None,
     difficulty: Optional[str] = None,
     topics: Optional[List[str]] = None,
+    source: str = "bank",
 ) -> int:
-    return len(_filter(_all_questions(), subject, difficulty, topics))
+    pool = _pdf_questions() if source == "pdf" else _all_questions()
+    return len(_filter(pool, subject, difficulty, topics))
+
+
+def _pdf_questions() -> List[Dict[str, Any]]:
+    return _stored_questions_for_bank(include_pdf=True)
 
 
 def _filter(
@@ -107,13 +131,15 @@ def sample_questions(
     difficulty: Optional[str] = None,
     topics: Optional[List[str]] = None,
     seed: Optional[int] = None,
+    source: str = "bank",
 ) -> List[Dict[str, Any]]:
     """Randomly sample up to ``num_questions`` matching MCQs from the bank.
 
     ``topics`` (when given) restricts to those subtopics within ``subject``;
     an empty/``None`` list means "all topics in the subject".
     """
-    pool = _filter(_all_questions(), subject, difficulty, topics)
+    pool = _pdf_questions() if source == "pdf" else _all_questions()
+    pool = _filter(pool, subject, difficulty, topics)
     rng = random.Random(seed)
     rng.shuffle(pool)
     return pool[: max(0, num_questions)]
