@@ -8,8 +8,10 @@ so the correct answers never reach the client until scoring.
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -446,6 +448,104 @@ class Api:
             "pages_failed": 0,
             "quota_exhausted": quota_hit,
             "source": path.name,
+        }
+
+    def pick_database_import_file(self) -> Optional[str]:
+        """Open a native dialog to pick a CGL Buddy database JSON file."""
+        import webview
+
+        windows = webview.windows
+        if not windows:
+            return None
+        result = windows[0].create_file_dialog(
+            webview.OPEN_DIALOG,
+            allow_multiple=False,
+            file_types=(
+                "CGL Buddy database (*.json)",
+                "JSON files (*.json)",
+                "All files (*.*)",
+            ),
+        )
+        if not result:
+            return None
+        return result[0] if isinstance(result, (list, tuple)) else result
+
+    def import_database(self, file_path: str) -> Dict[str, Any]:
+        """Append questions from a database JSON file, skipping duplicates."""
+        path = Path(file_path)
+        if not path.exists():
+            return {"ok": False, "error": "File not found."}
+        if path.suffix.lower() != ".json":
+            return {"ok": False, "error": "Please choose a JSON database file."}
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            records = question_store.records_from_payload(payload)
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            log.warning("import_database failed for %s: %s", path.name, exc)
+            return {"ok": False, "error": "Could not read that database JSON."}
+
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        preserve_sources = {
+            self._PDF_SOURCE,
+            self._IMAGE_SOURCE,
+            mcq_bank.LEGACY_IMPORT_SOURCE,
+        }
+        for rec in records:
+            source = rec.get("source") if rec.get("source") in preserve_sources else mcq_bank.DATABASE_IMPORT_SOURCE
+            grouped.setdefault(source, []).append(rec)
+
+        added = 0
+        skipped = 0
+        for source, items in grouped.items():
+            result = question_store.add_questions(items, source=source)
+            added += result.get("added", 0)
+            skipped += result.get("skipped", 0)
+        log.info(
+            "import_database %s: found %d, added %d, skipped %d",
+            path.name, len(records), added, skipped,
+        )
+        return {
+            "ok": True,
+            "found": len(records),
+            "added": added,
+            "skipped": skipped,
+            "source": path.name,
+        }
+
+    def export_database(self) -> Dict[str, Any]:
+        """Save the user's writable question database as portable JSON."""
+        import webview
+
+        windows = webview.windows
+        if not windows:
+            return {"ok": False, "error": "No app window is available."}
+        default_name = f"cgl-buddy-database-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
+        result = windows[0].create_file_dialog(
+            webview.SAVE_DIALOG,
+            save_filename=default_name,
+            file_types=(
+                "CGL Buddy database (*.json)",
+                "JSON files (*.json)",
+                "All files (*.*)",
+            ),
+        )
+        if not result:
+            return {"ok": True, "cancelled": True}
+        selected = result[0] if isinstance(result, (list, tuple)) else result
+        path = Path(selected)
+        if path.suffix.lower() != ".json":
+            path = path.with_suffix(".json")
+        payload = question_store.export_payload()
+        try:
+            path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        except OSError as exc:
+            log.warning("export_database failed for %s: %s", path, exc)
+            return {"ok": False, "error": "Could not save the database file."}
+        log.info("export_database %s: %d questions", path.name, payload["question_count"])
+        return {
+            "ok": True,
+            "path": str(path),
+            "exported": payload["question_count"],
         }
 
     def pick_import_file(self) -> Optional[str]:

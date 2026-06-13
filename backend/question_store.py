@@ -27,6 +27,8 @@ _LOCK = threading.Lock()
 
 # Cap the writable pool so the file never grows without bound.
 MAX_QUESTIONS = 5000
+EXPORT_FORMAT = "cgl-buddy-mcq-db"
+EXPORT_VERSION = 1
 
 
 def _store_path():
@@ -79,6 +81,37 @@ def list_questions(
 def all_questions() -> List[Dict[str, Any]]:
     """Every stored question (used when merging with the bundled bank)."""
     return _read()
+
+
+def export_payload() -> Dict[str, Any]:
+    """Portable JSON payload containing the user's writable questions only."""
+    questions = []
+    for q in _read():
+        questions.append({
+            "question": q.get("question", ""),
+            "options": q.get("options", []),
+            "correct_index": q.get("correct_index"),
+            "subject": q.get("subject") or q.get("category") or "General",
+            "topic": q.get("topic", ""),
+            "difficulty": q.get("difficulty", "medium"),
+            "explanation": q.get("explanation", ""),
+            "source": q.get("source") or "Imported database",
+        })
+    return {
+        "format": EXPORT_FORMAT,
+        "version": EXPORT_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "question_count": len(questions),
+        "questions": questions,
+    }
+
+
+def records_from_payload(payload: Any) -> List[Dict[str, Any]]:
+    """Extract MCQ records from either app-export JSON or a bare MCQ list."""
+    records = payload.get("questions") if isinstance(payload, dict) else payload
+    if not isinstance(records, list):
+        raise ValueError("Database JSON must be a list of questions or contain a questions array.")
+    return [r for r in records if isinstance(r, dict)]
 
 
 def collapse_ai_sources() -> int:
@@ -142,7 +175,12 @@ def add_questions(
         for rec in records:
             question = (rec.get("question") or "").strip()
             options = rec.get("options") or []
-            if not question or len(options) != 4 or rec.get("correct_index") is None:
+            try:
+                correct_index = int(rec.get("correct_index"))
+            except (TypeError, ValueError):
+                skipped += 1
+                continue
+            if not question or len(options) != 4 or correct_index not in range(4):
                 skipped += 1
                 continue
             k = _key(question)
@@ -155,7 +193,7 @@ def add_questions(
                 "id": uuid.uuid4().hex[:12],
                 "question": question,
                 "options": options,
-                "correct_index": int(rec["correct_index"]),
+                "correct_index": correct_index,
                 "subject": subject,
                 "topic": rec.get("topic", ""),
                 "difficulty": rec.get("difficulty", "medium"),

@@ -1079,6 +1079,45 @@
     }
   }
 
+  async function importDatabase() {
+    const statusEl = $("db-transfer-status");
+    try {
+      const file = await api().pick_database_import_file();
+      if (!file) return;
+      statusEl.innerHTML = '<span class="spinner"></span> Importing database…';
+      const res = await api().import_database(file);
+      if (!res.ok) {
+        statusEl.textContent = res.error || "Could not import that database.";
+        return;
+      }
+      statusEl.textContent = `Imported ${res.added} new question${res.added === 1 ? "" : "s"}; skipped ${res.skipped} duplicate/invalid item${res.skipped === 1 ? "" : "s"}.`;
+      await openDatabase();
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "Could not import that database.";
+    }
+  }
+
+  async function exportDatabase() {
+    const statusEl = $("db-transfer-status");
+    try {
+      statusEl.innerHTML = '<span class="spinner"></span> Preparing database…';
+      const res = await api().export_database();
+      if (res.cancelled) {
+        statusEl.textContent = "";
+        return;
+      }
+      if (!res.ok) {
+        statusEl.textContent = res.error || "Could not export the database.";
+        return;
+      }
+      statusEl.textContent = `Exported ${res.exported} saved question${res.exported === 1 ? "" : "s"}.`;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "Could not export the database.";
+    }
+  }
+
   function escapeAttr(s) {
     return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
@@ -1176,6 +1215,8 @@
     $("database-btn").addEventListener("click", () => { closeNavMenu(); openDatabase(); });
     $("database-back-btn").addEventListener("click", () => showView("setup"));
     $("database-browse-btn").addEventListener("click", openBrowse);
+    $("db-import-btn").addEventListener("click", importDatabase);
+    $("db-export-btn").addEventListener("click", exportDatabase);
     $("browse-back-btn").addEventListener("click", openDatabase);
     $("db-filter-subject").addEventListener("change", loadDbQuestions);
     $("db-filter-source").addEventListener("change", loadDbQuestions);

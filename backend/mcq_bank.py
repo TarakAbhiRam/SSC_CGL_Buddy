@@ -15,6 +15,7 @@ from .paths import bundled_mcq_bank
 
 IMAGE_IMPORT_SOURCE = "Imported image"
 PDF_IMPORT_SOURCE = "Imported PDF"
+DATABASE_IMPORT_SOURCE = "Imported database"
 LEGACY_IMPORT_SOURCE = "Imported (scan/image)"
 
 _lock = threading.Lock()
@@ -64,7 +65,7 @@ def _stored_questions_for_bank(include_pdf: bool = False) -> List[Dict[str, Any]
         return [q for q in questions if q.get("source") == PDF_IMPORT_SOURCE]
     return [
         q for q in questions
-        if q.get("source") in (IMAGE_IMPORT_SOURCE, LEGACY_IMPORT_SOURCE)
+        if q.get("source") in (IMAGE_IMPORT_SOURCE, DATABASE_IMPORT_SOURCE, LEGACY_IMPORT_SOURCE)
     ]
 
 

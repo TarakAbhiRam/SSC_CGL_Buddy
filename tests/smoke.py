@@ -134,6 +134,37 @@ def test_question_store_dedup():
         assert removed >= 0
 
 
+def test_database_payload_import_dedup():
+    """Portable database JSON can be imported while skipping duplicates."""
+    src = mcq_bank.DATABASE_IMPORT_SOURCE
+    original_store_path = question_store._store_path  # noqa: SLF001
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_store = Path(tmpdir) / "user_mcq.json"
+        try:
+            question_store._store_path = lambda: temp_store  # noqa: SLF001
+            record = {
+                "question": "__smoke__ portable db question?",
+                "options": ["a", "b", "c", "d"],
+                "correct_index": 2,
+                "subject": "General Awareness",
+                "topic": "Static GK",
+                "difficulty": "medium",
+                "explanation": "Because c.",
+            }
+            payload = {"format": question_store.EXPORT_FORMAT, "questions": [record, record]}
+            records = question_store.records_from_payload(payload)
+            result = question_store.add_questions(records, source=src)
+            assert result == {"added": 1, "skipped": 1}, result
+            exported = question_store.export_payload()
+            assert exported["format"] == question_store.EXPORT_FORMAT
+            assert exported["question_count"] == 1
+
+            sample = mcq_bank.sample_questions(10, subject="General Awareness", source="bank", seed=3)
+            assert any(q.get("source") == src for q in sample)
+        finally:
+            question_store._store_path = original_store_path  # noqa: SLF001
+
+
 def test_pdf_imports_are_separate_from_bank_images():
     """Bank + images includes tagged image imports, while PDF imports stay separate."""
     subject = "__smoke__ source split"

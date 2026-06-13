@@ -39,6 +39,9 @@ architecture, build instructions, and distribution notes live here.
 - **Image / screenshot of MCQs**: use **Import questions from image**. This uses Gemini
   vision OCR, so it needs a Gemini API key and is subject to Gemini quota limits. Image
   imports are tagged by Gemini and included in **Bank + images** mode.
+- **Shared JSON database**: open **Question bank** and use **Export database** to save
+  your current user-added questions as a portable JSON file. Use **Import database** to
+  append another CGL Buddy JSON database; repeated questions are skipped automatically.
 
 PDF import expects each question to include four options and a detectable answer such as
 `Ans. (b)`, `Answer: B`, or `Correct answer: 2`. Questions without an answer are skipped
