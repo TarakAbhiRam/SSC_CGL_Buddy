@@ -37,6 +37,12 @@ jobs:
           --collect-data webview
           main.py
 
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "build\CGL_Buddy_Inno_Setup.iss"'
+
       - name: Zip distributable
         run: Compress-Archive -Path "dist/CGL Buddy/*" -DestinationPath CGL_Buddy_Windows.zip
 
@@ -45,4 +51,11 @@ jobs:
         with:
           name: CGL_Buddy_Windows
           path: CGL_Buddy_Windows.zip
+          retention-days: 30
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CGL_Buddy_Setup_x64
+          path: installer/CGL_Buddy_Setup_x64.exe
           retention-days: 30

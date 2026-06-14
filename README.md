@@ -163,6 +163,32 @@ build\build_win.bat
 ```
 Output: `dist\CGL Buddy\CGL Buddy.exe`.
 
+### Optional Windows Installer With Inno Setup
+
+If you want an installer, build the PyInstaller app first on a Windows PC, then
+compile `build\CGL_Buddy_Inno_Setup.iss` with Inno Setup.
+
+Important: CGL Buddy is built as a PyInstaller **onedir** app. The installer must
+include the whole `dist\CGL Buddy\` folder, not only `CGL Buddy.exe`, because the
+exe depends on files inside that folder.
+
+The provided Inno script creates a 64-bit-compatible installer:
+
+```bat
+build\build_win.bat
+iscc build\CGL_Buddy_Inno_Setup.iss
+```
+
+Output: `installer\CGL_Buddy_Setup_x64.exe`.
+
+If a user sees **"This app can't run on your PC"**, check these first:
+
+- The Windows build/installer was created on Windows, not macOS.
+- The installer includes all files from `dist\CGL Buddy\`, not just the exe.
+- The target PC is 64-bit Windows 10/11. The normal GitHub Actions/Python build is x64.
+- If you must support old 32-bit Windows PCs, build a separate installer using 32-bit Python on 32-bit Windows and label it separately.
+- Re-download the installer if the file may be incomplete or corrupted.
+
 ### Manual macOS Build
 ```bash
 python -m venv venv
@@ -182,6 +208,7 @@ the main source of high RAM and large package size.
 ### Distribution notes
 
 - Ship builds as `.zip` files: `CGL_Buddy_macOS.zip` and `CGL_Buddy_Windows.zip`.
+- If shipping an installer, use `CGL_Buddy_Setup_x64.exe` built from `build\CGL_Buddy_Inno_Setup.iss`.
 - Unsigned Windows builds may show SmartScreen. Users can choose **More info → Run anyway**.
 - Unsigned macOS builds may need the usual Gatekeeper approval for locally distributed apps.
 - PyInstaller cannot cross-compile; build Windows on Windows and macOS on macOS, or use the workflows.
