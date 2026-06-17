@@ -52,9 +52,9 @@ def bundled_questions() -> List[Dict[str, Any]]:
 def _stored_questions_for_bank(include_pdf: bool = False) -> List[Dict[str, Any]]:
     """Writable questions eligible for a quiz source.
 
-    Bank + images mode intentionally includes image imports because Gemini tags
-    them into the same subject/topic shape as the bundled bank. PDF imports are
-    kept separate because they are batch-tagged only by subject.
+    Full question bank includes every writable source except PDF-import-only
+    questions. PDF imports stay separate because they are batch-tagged by
+    subject and have a dedicated quiz source.
     """
     try:
         from . import question_store
@@ -63,10 +63,7 @@ def _stored_questions_for_bank(include_pdf: bool = False) -> List[Dict[str, Any]
         return []
     if include_pdf:
         return [q for q in questions if q.get("source") == PDF_IMPORT_SOURCE]
-    return [
-        q for q in questions
-        if q.get("source") in (IMAGE_IMPORT_SOURCE, DATABASE_IMPORT_SOURCE, LEGACY_IMPORT_SOURCE)
-    ]
+    return [q for q in questions if q.get("source") != PDF_IMPORT_SOURCE]
 
 
 def _all_questions() -> List[Dict[str, Any]]:

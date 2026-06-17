@@ -19,17 +19,20 @@ from backend import question_store  # noqa: E402
 def test_parse_clean_json():
     raw = (
         '[{"question":"2+2?","options":["1","2","3","4"],"correct_index":3,'
+        '"topic":"Number System",'
         '"category":"Math","difficulty":"easy","explanation":"4."}]'
     )
     mcqs = llm_client.parse_mcqs(raw)
     assert len(mcqs) == 1, mcqs
     assert mcqs[0]["correct_index"] == 3
+    assert mcqs[0]["topic"] == "Number System"
 
 
 def test_parse_fenced_and_malformed_mixed():
     raw = (
         "```json\n"
         '[{"question":"ok?","options":["a","b","c","d"],"correct_index":0,'
+        '"topic":"Reading Comprehension",'
         '"category":"X","difficulty":"weird","explanation":"e"},'
         '{"question":"bad","options":["only","two"],"correct_index":0}]'
         "\n```"
@@ -38,6 +41,20 @@ def test_parse_fenced_and_malformed_mixed():
     # Malformed (2 options) dropped; difficulty normalised to "medium".
     assert len(mcqs) == 1, mcqs
     assert mcqs[0]["difficulty"] == "medium"
+
+
+def test_parse_enforces_selected_topics():
+    raw = (
+        '[{"question":"rc?","options":["a","b","c","d"],"correct_index":1,'
+        '"topic":"Reading Comprehension","category":"English Comprehension",'
+        '"difficulty":"medium","explanation":"x"},'
+        '{"question":"pj?","options":["a","b","c","d"],"correct_index":2,'
+        '"topic":"Para Jumbles (Sentence Rearrangement)","category":"English Comprehension",'
+        '"difficulty":"medium","explanation":"y"}]'
+    )
+    mcqs = llm_client.parse_mcqs(raw, allowed_topics=["Reading Comprehension"])
+    assert len(mcqs) == 1, mcqs
+    assert mcqs[0]["topic"] == "Reading Comprehension"
 
 
 def test_validate_rejects_bad_index():
@@ -197,6 +214,56 @@ def test_pdf_imports_are_separate_from_bank_images():
             pdf_questions = mcq_bank.sample_questions(10, subject=subject, source="pdf", seed=1)
             assert [q["question"] for q in bank_questions] == [image_q["question"]]
             assert [q["question"] for q in pdf_questions] == [pdf_q["question"]]
+        finally:
+            question_store._store_path = original_store_path  # noqa: SLF001
+
+
+def test_ai_generated_questions_are_in_full_bank():
+    """Full question bank must include AI-generated questions saved to the store."""
+    subject = "__smoke__ ai in full bank"
+    ai_q = {
+        "question": "__smoke__ AI generated should appear in full bank?",
+        "options": ["a", "b", "c", "d"],
+        "correct_index": 2,
+        "subject": subject,
+        "difficulty": "medium",
+        "explanation": "",
+    }
+    original_store_path = question_store._store_path  # noqa: SLF001
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_store = Path(tmpdir) / "user_mcq.json"
+        try:
+            question_store._store_path = lambda: temp_store  # noqa: SLF001
+            question_store.add_questions([ai_q], source="AI generated")
+
+            bank_questions = mcq_bank.sample_questions(10, subject=subject, source="bank", seed=11)
+            assert any(q.get("question") == ai_q["question"] for q in bank_questions), bank_questions
+        finally:
+            question_store._store_path = original_store_path  # noqa: SLF001
+
+
+def test_ai_retag_backfills_subject_and_topic():
+    """Legacy AI rows should be retagged to canonical subject/topic when possible."""
+    original_store_path = question_store._store_path  # noqa: SLF001
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_store = Path(tmpdir) / "user_mcq.json"
+        try:
+            question_store._store_path = lambda: temp_store  # noqa: SLF001
+            question_store.add_questions([
+                {
+                    "question": "Arrange the following sentences to form a meaningful paragraph.",
+                    "options": ["A", "B", "C", "D"],
+                    "correct_index": 0,
+                    "category": "English",
+                    "difficulty": "medium",
+                    "explanation": "",
+                }
+            ], source="AI generated")
+            changed = question_store.retag_ai_questions()
+            assert changed >= 1
+            rows = question_store.list_questions(source="AI generated")
+            assert rows and rows[0].get("subject") == "English Comprehension", rows
+            assert rows[0].get("topic") == "Para Jumbles (Sentence Rearrangement)", rows
         finally:
             question_store._store_path = original_store_path  # noqa: SLF001
 

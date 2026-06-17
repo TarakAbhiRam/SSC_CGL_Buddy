@@ -21,6 +21,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Set
 
+from . import syllabus
 from .paths import user_data_dir
 
 _LOCK = threading.Lock()
@@ -125,6 +126,73 @@ def collapse_ai_sources() -> int:
             if src.startswith("AI generated") and src != "AI generated":
                 q["source"] = "AI generated"
                 changed += 1
+        if changed:
+            _write(questions)
+        return changed
+
+
+def _canonical_subject(raw: str) -> str:
+    text = (raw or "").strip().lower()
+    aliases = {
+        "reasoning": syllabus.REASONING,
+        "general intelligence": syllabus.REASONING,
+        "general intelligence & reasoning": syllabus.REASONING,
+        "quant": syllabus.QUANT,
+        "math": syllabus.QUANT,
+        "mathematics": syllabus.QUANT,
+        "quantitative aptitude": syllabus.QUANT,
+        "english": syllabus.ENGLISH,
+        "english comprehension": syllabus.ENGLISH,
+        "general awareness": syllabus.GA,
+        "gk": syllabus.GA,
+        "ga": syllabus.GA,
+    }
+    return aliases.get(text, raw or "General")
+
+
+def _infer_topic(subject: str, question: str) -> str:
+    q = (question or "").lower()
+    if subject == syllabus.ENGLISH:
+        if any(k in q for k in ("rearrange", "correct sequence", "arrange the following", "para", "sentence order")):
+            return "Para Jumbles (Sentence Rearrangement)"
+        if any(k in q for k in ("read the passage", "according to the passage", "passage", "comprehension")):
+            return "Reading Comprehension"
+        if "synonym" in q:
+            return "Synonyms"
+        if "antonym" in q:
+            return "Antonyms"
+        if "idiom" in q or "phrase" in q:
+            return "Idioms & Phrases"
+    return ""
+
+
+def retag_ai_questions() -> int:
+    """Backfill canonical subject/topic tags for stored AI questions.
+
+    This is best-effort and intentionally conservative: only missing/legacy
+    fields are updated.
+    """
+    with _LOCK:
+        questions = _read()
+        changed = 0
+        for q in questions:
+            src = str(q.get("source") or "")
+            if not src.startswith("AI generated"):
+                continue
+
+            subject_old = str(q.get("subject") or q.get("category") or "General")
+            subject_new = _canonical_subject(subject_old)
+            if subject_new != subject_old:
+                q["subject"] = subject_new
+                changed += 1
+
+            topic_old = str(q.get("topic") or "").strip()
+            if not topic_old:
+                inferred = _infer_topic(subject_new, str(q.get("question") or ""))
+                if inferred:
+                    q["topic"] = inferred
+                    changed += 1
+
         if changed:
             _write(questions)
         return changed

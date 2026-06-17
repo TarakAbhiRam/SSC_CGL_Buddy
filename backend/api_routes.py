@@ -37,6 +37,10 @@ class Api:
             question_store.collapse_ai_sources()
         except Exception as exc:  # pragma: no cover - best-effort migration
             log.warning("AI source migration failed: %s", exc)
+        try:
+            question_store.retag_ai_questions()
+        except Exception as exc:  # pragma: no cover - best-effort migration
+            log.warning("AI tag backfill failed: %s", exc)
 
     # --- Settings -----------------------------------------------------------
 

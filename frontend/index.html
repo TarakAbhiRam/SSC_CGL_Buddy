@@ -14,6 +14,7 @@
       <h1>CGL Buddy</h1>
     </div>
     <div class="header-actions">
+      <button id="home-btn" class="home-btn" type="button" aria-label="Go to home">🏠</button>
       <button id="theme-toggle-btn" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">☾</button>
       <details class="nav-menu">
         <summary>Menu</summary>
@@ -32,7 +33,7 @@
         <div class="section-head">
           <div>
             <h2>Configure your quiz</h2>
-            <p class="hint">Choose a subject, source, and timing. Bank + images uses tagged questions; PDF imports stay separate.</p>
+            <p class="hint">Choose a subject, source, and timing. Full question bank includes all saved and bundled questions; PDF imports stay separate.</p>
           </div>
         </div>
         <div id="setup-banner"></div>
@@ -76,11 +77,11 @@
         <div class="field">
           <label for="mode">Question source</label>
           <select id="mode">
-            <option value="bank">Bank + images (no API key needed)</option>
+            <option value="bank">Full question bank (no API key needed)</option>
             <option value="pdf">Imported PDFs</option>
             <option value="live">AI generation (needs API key)</option>
           </select>
-          <p class="hint" id="mode-hint">Bank + images mode works offline using built-in and image-imported questions.</p>
+          <p class="hint" id="mode-hint">Full question bank works offline and includes all bundled plus imported/saved questions.</p>
         </div>
         <div class="field" id="provider-field" style="display:none;">
           <label for="setup-provider">AI provider</label>
@@ -149,21 +150,42 @@
 
     <!-- ===================== QUIZ ===================== -->
     <section id="view-quiz" class="view">
-      <div class="card">
-        <div id="quiz-warnings"></div>
-        <div class="exam-head">
-          <span id="timer" class="timer" style="display:none;">00:00</span>
-          <button id="pause-btn" class="secondary compact" style="display:none;">Pause</button>
+      <div class="quiz-container">
+        <div class="quiz-main">
+          <div class="card">
+            <div id="quiz-warnings"></div>
+            <div class="exam-head">
+              <span id="timer" class="timer" style="display:none;">00:00</span>
+              <button id="pause-btn" class="secondary compact" style="display:none;">Pause</button>
+            </div>
+            <div class="q-progress" id="q-progress">Question 1 of 10</div>
+            <div class="q-text" id="q-text"></div>
+            <div class="options" id="q-options"></div>
+            <div class="mark-for-review-section">
+              <label class="mark-review-label">
+                <input type="checkbox" id="mark-for-review-cb" />
+                <span>Mark for review</span>
+              </label>
+            </div>
+            <div class="quiz-nav">
+              <button id="prev-btn" class="secondary">Previous</button>
+              <div class="spacer"></div>
+              <button id="end-btn" class="ghost danger">End test</button>
+              <button id="next-btn" class="secondary">Next</button>
+              <button id="submit-btn">Submit Quiz</button>
+            </div>
+          </div>
         </div>
-        <div class="q-progress" id="q-progress">Question 1 of 10</div>
-        <div class="q-text" id="q-text"></div>
-        <div class="options" id="q-options"></div>
-        <div class="quiz-nav">
-          <button id="prev-btn" class="secondary">Previous</button>
-          <div class="spacer"></div>
-          <button id="end-btn" class="ghost danger">End test</button>
-          <button id="next-btn" class="secondary">Next</button>
-          <button id="submit-btn">Submit Quiz</button>
+        <div class="quiz-grid-sidebar">
+          <div class="grid-header">Questions</div>
+          <div id="questions-grid" class="questions-grid"></div>
+          <div class="grid-legend">
+            <div class="legend-item"><span class="legend-box answered"></span> <span>Answered</span></div>
+            <div class="legend-item"><span class="legend-box not-answered"></span> <span>Not answered</span></div>
+            <div class="legend-item"><span class="legend-box marked-answered"></span> <span>Marked (answered)</span></div>
+            <div class="legend-item"><span class="legend-box marked-unanswered"></span> <span>Marked (unanswered)</span></div>
+            <div class="legend-item"><span class="legend-box unviewed"></span> <span>Not viewed yet</span></div>
+          </div>
         </div>
       </div>
     </section>
@@ -173,6 +195,7 @@
       <div class="card">
         <h2>Results</h2>
         <div class="stats-grid" id="stats-grid"></div>
+        <div id="marked-summary" class="marked-summary" style="display:none;"></div>
       </div>
 
       <div class="chart-grid">
@@ -356,7 +379,7 @@
         </div>
         <div class="key-status" id="gemini-status"></div>
       </div>
-      <p class="hint">Keys are stored locally on your computer only. Bank + images mode needs no key.</p>
+      <p class="hint">Keys are stored locally on your computer only. Full question bank needs no key.</p>
       <div class="field toggle-field">
         <label class="toggle">
           <input type="checkbox" id="auto-save-ai" />

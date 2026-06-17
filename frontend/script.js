@@ -11,8 +11,12 @@
     quizId: null,
     questions: [],
     current: 0,
-    answers: {},        // questionId -> selected_index
-    times: {},          // questionId -> seconds
+    answers: {},        // questionIndex -> selected_index
+    times: {},          // questionIndex -> seconds
+    marked: {},         // questionIndex -> boolean (marked for review)
+    viewed: {},         // questionIndex -> boolean (committed to grid)
+    gridAnswers: {},    // questionIndex -> selected_index committed for matrix color
+    gridMarked: {},     // questionIndex -> boolean committed for matrix color
     questionEnterTs: 0,
     durationMinutes: 15,
     timerInterval: null,
@@ -232,7 +236,7 @@
   function updateModeHint() {
     const mode = $("mode").value;
     const hint = $("mode-hint");
-    if (mode === "bank") hint.textContent = "Bank + images uses built-in questions and tagged image imports.";
+    if (mode === "bank") hint.textContent = "Full question bank includes all bundled and imported/saved questions.";
     else if (mode === "pdf") hint.textContent = "PDF mode uses only questions imported from subject-wise PDFs.";
     else hint.textContent = "AI mode generates fresh questions with the selected provider.";
 
@@ -286,7 +290,7 @@
       // embedding preload is intentionally skipped to keep memory usage low.
       if (options.mode === "live") {
         if (!options.provider) {
-          banner("setup-banner", "No API key saved. Add a Groq or Gemini key in Settings, or use Bank + images mode.", "warn");
+          banner("setup-banner", "No API key saved. Add a Groq or Gemini key in Settings, or use Full question bank.", "warn");
           return;
         }
       }
@@ -304,6 +308,10 @@
       state.current = 0;
       state.answers = {};
       state.times = {};
+      state.marked = {};
+      state.viewed = {};
+      state.gridAnswers = {};
+      state.gridMarked = {};
       state.submitting = false;
       state.durationMinutes = res.duration_minutes;
       // Warnings (e.g. AI fell back to the bank) are shown only in the pre-test
@@ -351,14 +359,15 @@
 
   // ---- Quiz screen ----
   function recordTimeOnLeave() {
-    const q = state.questions[state.current];
-    if (!q) return;
+    if (!state.questions[state.current]) return;
     const elapsed = (Date.now() - state.questionEnterTs) / 1000;
-    state.times[q.id] = (state.times[q.id] || 0) + elapsed;
+    const key = state.current;
+    state.times[key] = (state.times[key] || 0) + elapsed;
   }
 
   function renderQuestion() {
     const q = state.questions[state.current];
+    const key = state.current;
     state.questionEnterTs = Date.now();
     $("q-progress").textContent = `Question ${state.current + 1} of ${state.questions.length}`;
     $("q-text").textContent = q.question;
@@ -368,26 +377,92 @@
     const letters = ["A", "B", "C", "D"];
     q.options.forEach((opt, i) => {
       const div = document.createElement("div");
-      div.className = "option" + (state.answers[q.id] === i ? " selected" : "");
+      div.className = "option" + (state.answers[key] === i ? " selected" : "");
       div.innerHTML = `<span class="marker">${letters[i]}</span><span>${opt}</span>`;
       div.addEventListener("click", () => {
         if (state.paused) return;
-        state.answers[q.id] = i;
+        // Clicking the selected option again clears the answer.
+        if (state.answers[key] === i) {
+          delete state.answers[key];
+        } else {
+          state.answers[key] = i;
+        }
         renderQuestion();
       });
       optsEl.appendChild(div);
     });
 
+    // Sync mark-for-review checkbox
+    const markCb = $("mark-for-review-cb");
+    markCb.checked = state.marked[key] || false;
+    markCb.addEventListener("change", (e) => {
+      state.marked[key] = e.target.checked;
+    }, { once: true });
+
     $("prev-btn").disabled = state.current === 0;
     const isLast = state.current === state.questions.length - 1;
     $("next-btn").style.display = isLast ? "none" : "inline-block";
     $("submit-btn").style.display = isLast ? "inline-block" : "none";
+    
+    renderGrid();
+  }
+
+  // Matrix colors are committed only when the user presses Next.
+  function commitCurrentToGrid() {
+    const key = state.current;
+    state.viewed[key] = true;
+    if (key in state.answers) state.gridAnswers[key] = state.answers[key];
+    else delete state.gridAnswers[key];
+    if (state.marked[key]) state.gridMarked[key] = true;
+    else delete state.gridMarked[key];
   }
 
   function goTo(delta) {
     if (state.paused) return;
+    if (delta === 1) commitCurrentToGrid();
     recordTimeOnLeave();
     state.current = Math.max(0, Math.min(state.questions.length - 1, state.current + delta));
+    renderQuestion();
+  }
+
+  function renderGrid() {
+    const gridEl = $("questions-grid");
+    gridEl.innerHTML = "";
+    state.questions.forEach((q, idx) => {
+      const div = document.createElement("div");
+      div.className = "grid-number";
+      div.textContent = idx + 1;
+
+      const answered = idx in state.gridAnswers;
+      const marked = !!state.gridMarked[idx];
+      const viewed = !!state.viewed[idx];
+
+      // Set visual state classes.
+      if (marked && answered) {
+        div.classList.add("marked-answered");
+      } else if (marked && !answered) {
+        div.classList.add("marked-unanswered");
+      } else if (answered) {
+        div.classList.add("answered");
+      } else if (viewed) {
+        div.classList.add("not-answered");
+      } else {
+        div.classList.add("unviewed");
+      }
+
+      if (idx === state.current) {
+        div.classList.add("current");
+      }
+      
+      div.addEventListener("click", () => goToQuestion(idx));
+      gridEl.appendChild(div);
+    });
+  }
+
+  function goToQuestion(idx) {
+    if (state.paused) return;
+    recordTimeOnLeave();
+    state.current = Math.max(0, Math.min(state.questions.length - 1, idx));
     renderQuestion();
   }
 
@@ -453,10 +528,10 @@
     state.submitting = true;
     recordTimeOnLeave();
     stopTimer();
-    const responses = state.questions.map((q) => ({
+    const responses = state.questions.map((q, idx) => ({
       id: q.id,
-      selected_index: q.id in state.answers ? state.answers[q.id] : null,
-      time_spent_seconds: state.times[q.id] || 0,
+      selected_index: idx in state.answers ? state.answers[idx] : null,
+      time_spent_seconds: state.times[idx] || 0,
     }));
     try {
       const res = await api().submit_quiz(state.quizId, responses);
@@ -541,6 +616,16 @@
       <div class="stat"><div class="value">${s.skipped}</div><div class="label">Skipped</div></div>
       <div class="stat"><div class="value">${Math.round(s.total_time_seconds)}s</div><div class="label">Total time</div></div>
       <div class="stat"><div class="value">${s.avg_time_seconds}s</div><div class="label">Avg / question</div></div>`;
+
+    // Show marked-for-review summary
+    const markedCount = Object.values(state.marked).filter(Boolean).length;
+    const markedSummary = $("marked-summary");
+    if (markedCount > 0) {
+      markedSummary.innerHTML = `<strong>📌 ${markedCount} question${markedCount === 1 ? "" : "s"}</strong> marked for review`;
+      markedSummary.style.display = "block";
+    } else {
+      markedSummary.style.display = "none";
+    }
 
     drawCharts(res.charts);
   state.chartData = res.charts;
@@ -769,7 +854,7 @@
         let msg = `Imported ${added} new question${added === 1 ? "" : "s"} from ${res.source}`;
         if (res.skipped) msg += ` (skipped ${res.skipped} duplicate/invalid)`;
         if (res.pages_failed) msg += `; ${res.pages_failed} page(s) failed`;
-        msg += ". Find them in the Database screen under \"Imported image\"; they are included in Bank + images mode.";
+        msg += ". Find them in the Database screen under \"Imported image\"; they are included in Full question bank.";
         status.textContent = msg;
         status.className = res.quota_exhausted ? "import-status warn" : "hint";
         if (res.quota_exhausted) {
@@ -891,7 +976,7 @@
       const topics = Array.isArray(s.topics) && s.topics.length
         ? s.topics.join(", ")
         : "All topics";
-      const modeLabel = { bank: "Bank + images", live: "AI", pdf: "PDF" }[s.mode] || s.mode || "Bank + images";
+      const modeLabel = { bank: "Full question bank", live: "AI", pdf: "Imported PDF" }[s.mode] || s.mode || "Full question bank";
       const diff = s.difficulty && s.difficulty !== "All" ? s.difficulty : "All levels";
       const da = s.difficulty_accuracy || {};
       const chip = (lvl, label) => {
@@ -925,7 +1010,7 @@
     const s = state.sessions[idx];
     if (!s || !Array.isArray(s.questions) || !s.questions.length) return;
     $("attempt-title").textContent = `${subjectLabel(s.subject)} — ${s.score}/${s.total} (${s.accuracy}%)`;
-    const modeLabel = { bank: "Bank + images", live: "AI", pdf: "PDF" }[s.mode] || s.mode || "Bank + images";
+    const modeLabel = { bank: "Full question bank", live: "AI", pdf: "Imported PDF" }[s.mode] || s.mode || "Full question bank";
     $("attempt-meta").textContent =
       `${fmtDate(s.timestamp)} · ${modeLabel} · ${fmtDuration(s.time_taken_seconds)} taken`;
     $("attempt-questions").innerHTML = reviewItemsHtml(s.questions, (q) => q.subject);
@@ -1185,6 +1270,7 @@
   // ---- Wire up ----
   function bind() {
     $("theme-toggle-btn").addEventListener("click", toggleTheme);
+    $("home-btn").addEventListener("click", () => showView("setup"));
     $("start-btn").addEventListener("click", startQuiz);
     $("mode").addEventListener("change", () => { updateModeHint(); renderTopics(); });
     $("category").addEventListener("change", () => renderTopics());
