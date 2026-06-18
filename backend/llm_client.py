@@ -8,6 +8,7 @@ calls are retried with exponential backoff.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import re
@@ -21,7 +22,8 @@ log = logging.getLogger("CGL_Buddy.llm")
 
 VALID_PROVIDERS = ("gemini", "groq")
 GEMINI_MODEL = "gemini-2.5-flash"
-GROQ_MODEL = "llama-3.1-8b-instant"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_VISION_MODEL = "llama-3.2-11b-vision-preview"
 
 
 class LLMError(RuntimeError):
@@ -40,6 +42,7 @@ def build_prompt(
     context = "\n\n---\n\n".join(context_chunks) if context_chunks else "(no extra context)"
     subject = category if category and category != "All" else "any of the four SSC CGL subjects"
     diff = difficulty if difficulty and difficulty != "All" else "a mix of easy, medium and hard"
+    valid_subjects = syllabus.subjects()
     topic_choices = list(topics or [])
     if (not topic_choices) and category and category != "All":
         topic_choices = syllabus.topics(category)
@@ -73,6 +76,7 @@ These MUST match the real SSC CGL exam style:
 
 Output rules:
 - Return ONLY a JSON array. No prose, no markdown, no code fences.
+- Use ONLY official SSC subject labels for "category": {", ".join(valid_subjects)}.
 
 Each element must be an object with EXACTLY these keys:
   "question":      string
@@ -86,6 +90,8 @@ Each element must be an object with EXACTLY these keys:
 Topic tagging rules:
 - "topic" is mandatory for every question.
 - If subtopics were provided, "topic" must be one of: {", ".join(topic_choices) if topic_choices else "(infer the best SSC subtopic for the question)"}.
+- If subject is fixed to "{category}" (not "All"), "category" must be exactly "{category}" on every item.
+- Never invent new subject names or topic labels; always map to the closest valid syllabus label.
 - Do not leave "topic" empty.
 
 Reference material (use as inspiration for style/topics; do not copy verbatim):
@@ -96,6 +102,20 @@ Reference material (use as inspiration for style/topics; do not copy verbatim):
 def build_extract_prompt(category: Optional[str] = None) -> str:
     """Prompt for reading MCQs out of scanned page / image snippets (vision)."""
     cat = category if category and category != "All" else "the appropriate SSC subject"
+    valid_subjects = syllabus.subjects()
+    allowed_topics = syllabus.topics(category) if category and category != "All" else []
+    if category and category != "All":
+        category_rule = f'- "category" must be exactly "{category}" for every item.'
+    else:
+        category_rule = (
+            '- "category" must be exactly one of these SSC labels: '
+            + ", ".join(valid_subjects)
+            + "."
+        )
+    if allowed_topics:
+        topic_rule = '- "topic" must be one of: ' + ", ".join(allowed_topics) + "."
+    else:
+        topic_rule = '- "topic" must be a concise SSC subtopic label that matches the question subject.'
     return f"""You are an expert SSC exam assistant. The attached image(s) are scanned
 exam pages or snippets from a question paper / question bank. Read them and extract
 EVERY complete multiple-choice question you can find — there may be just one, or many.
@@ -106,6 +126,9 @@ Rules:
   you are confident is correct.
 - Transcribe text faithfully and fix obvious OCR glitches.
 - Skip page headers/footers, ads, watermarks, page numbers, and incomplete questions.
+- Use strict SSC taxonomy for subject + topic fields.
+- {category_rule}
+- {topic_rule}
 - Return ONLY a JSON array. No prose, no markdown, no code fences.
 
 Each element must be an object with EXACTLY these keys:
@@ -113,6 +136,7 @@ Each element must be an object with EXACTLY these keys:
   "options":       array of exactly 4 strings
   "correct_index": integer 0-3 (index of the correct option)
   "category":      string (the subject, e.g. "{cat}")
+    "topic":         string (SSC subtopic tag)
   "difficulty":    one of "easy", "medium", "hard"
   "explanation":   string (1-2 sentences on why the answer is correct)
 
@@ -184,6 +208,49 @@ def _call_groq(prompt: str, api_key: str) -> str:
         return resp.choices[0].message.content or ""
     except Exception as exc:  # noqa: BLE001
         raise LLMError(f"Groq request failed: {exc}") from exc
+
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=8), reraise=True)
+def _call_groq_vision(image_parts: List[Dict[str, Any]], prompt: str, api_key: str) -> str:
+    """Send image(s) + prompt to a Groq vision-capable model."""
+    try:
+        from groq import Groq
+
+        user_content: List[Dict[str, Any]] = [{"type": "text", "text": prompt}]
+        for part in image_parts:
+            mime_type = str(part.get("mime_type") or "image/png")
+            data = part.get("data")
+            if not isinstance(data, (bytes, bytearray)):
+                continue
+            b64 = base64.b64encode(bytes(data)).decode("ascii")
+            user_content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{b64}"},
+                }
+            )
+
+        if len(user_content) == 1:
+            raise LLMError("No valid image data provided for Groq vision extraction.")
+
+        client = Groq(api_key=api_key)
+        resp = client.chat.completions.create(
+            model=GROQ_VISION_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an OCR + exam extraction assistant for India's SSC CGL Tier-1 exam. "
+                        "Extract complete MCQs and return ONLY a JSON array with the required schema."
+                    ),
+                },
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0.2,
+        )
+        return resp.choices[0].message.content or ""
+    except Exception as exc:  # noqa: BLE001
+        raise LLMError(f"Groq vision request failed: {exc}") from exc
 
 
 def _call_provider(prompt: str, provider: str, api_key: str) -> str:
@@ -377,9 +444,10 @@ def generate_mcqs(
 def extract_mcqs_from_images(
     image_parts: List[Dict[str, Any]],
     category: Optional[str],
+    provider: str,
     api_key: str,
 ) -> List[Dict[str, Any]]:
-    """Read MCQs out of scanned page/image blobs via Gemini vision.
+    """Read MCQs out of scanned page/image blobs via the selected provider.
 
     ``image_parts`` is a list of ``{"mime_type": str, "data": bytes}``. Returns
     validated MCQs (malformed ones dropped); ``[]`` if nothing readable.
@@ -387,12 +455,20 @@ def extract_mcqs_from_images(
     """
     if not image_parts:
         return []
+    provider = (provider or "").lower()
+    if provider not in VALID_PROVIDERS:
+        raise LLMError(f"Unknown provider: {provider!r}")
     if not api_key:
-        raise LLMError("No Gemini API key configured for image extraction.")
+        raise LLMError(f"No {provider} API key configured for image extraction.")
     prompt = build_extract_prompt(category)
-    raw = _call_gemini_vision(image_parts, prompt, api_key)
+    allowed_topics = syllabus.topics(category) if category and category != "All" else []
+    raw = (
+        _call_gemini_vision(image_parts, prompt, api_key)
+        if provider == "gemini"
+        else _call_groq_vision(image_parts, prompt, api_key)
+    )
     try:
-        return parse_mcqs(raw)
+        return parse_mcqs(raw, allowed_topics=allowed_topics, requested_category=category)
     except (ValueError, json.JSONDecodeError):
         return []
 

@@ -859,7 +859,7 @@
         status.className = res.quota_exhausted ? "import-status warn" : "hint";
         if (res.quota_exhausted) {
           status.textContent = msg +
-            " Note: Gemini's daily free-tier limit was hit, so some pages were skipped — retry after it resets to capture the rest.";
+            " Note: Gemini quota/rate limit was hit, so some pages may be skipped. Retry shortly.";
         }
       } else {
         status.textContent = res.error || "Import failed.";

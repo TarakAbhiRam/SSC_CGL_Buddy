@@ -22,7 +22,7 @@ from typing import Any, Dict, Iterator, List, Optional
 # Minimum characters on a page before we assume it has real (non-scanned) text.
 _MIN_PAGE_TEXT = 20
 
-# --- Scanned-import (Gemini vision OCR) limits -------------------------------
+# --- Scanned-import (provider vision OCR) limits -----------------------------
 # Typical question papers are short; cap pages/size to protect the user's API
 # quota and keep payloads small. Only used by the structured-import path.
 MAX_OCR_PAGES = 20

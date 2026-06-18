@@ -336,7 +336,7 @@ class Api:
         log.info("cleared session history")
         return {"ok": True, "sessions": []}
 
-    # --- Scanned / image question import (Gemini vision) --------------------
+    # --- Scanned / image question import (provider vision) -------------------
 
     _PDF_SOURCE = mcq_bank.PDF_IMPORT_SOURCE
     _IMAGE_SOURCE = mcq_bank.IMAGE_IMPORT_SOURCE
@@ -348,8 +348,8 @@ class Api:
         - **Digital PDFs** are parsed straight from their text — no LLM, no API
           key, no quota. Scanned/image-only PDFs yield nothing and are rejected
           with a hint to import them as images instead.
-        - **Images** (png/jpg/webp/…) are read via Gemini vision OCR, which
-          needs a Gemini API key.
+                - **Images** (png/jpg/webp/…) are read via the selected provider's
+                    vision OCR, which needs that provider API key.
         """
         path = Path(file_path)
         options = options or {}
@@ -403,10 +403,12 @@ class Api:
         if ext not in pdf_processor.IMPORT_IMAGE_EXTS:
             return {"ok": False, "error": "Please choose a PDF or image (png, jpg, webp)."}
 
-        key = config.get_api_key("gemini")
+        provider = "gemini"
+        key = config.get_api_key(provider)
         if not key:
             return {
                 "ok": False,
+                "provider": provider,
                 "error": "Add a Gemini API key in Settings to import questions from images.",
             }
         try:
@@ -421,23 +423,27 @@ class Api:
         quota_hit = False
         part = {"mime_type": "image/png", "data": png}
         try:
-            records = llm_client.extract_mcqs_from_images([part], None, key)
+            records = llm_client.extract_mcqs_from_images([part], None, provider, key)
         except llm_client.LLMError as exc:
             err = str(exc).lower()
             if "429" in err or "quota" in err or "rate limit" in err or "rate-limit" in err:
                 quota_hit = True
-            log.warning("import_questions image failed: %s", exc)
+            log.warning("import_questions image failed via %s: %s", provider, exc)
 
         if not records:
             if quota_hit:
                 msg = (
-                    "Gemini's free-tier daily limit (20 requests/day) is exhausted, "
-                    "so the image couldn't be read. Try again after the quota resets, "
-                    "or enable billing on your Gemini API key."
+                    "Gemini's free-tier daily limit appears exhausted, so the image "
+                    "couldn't be read. Try again after quota reset."
                 )
             else:
                 msg = "No complete questions could be read from that image."
-            return {"ok": False, "error": msg, "quota_exhausted": quota_hit}
+            return {
+                "ok": False,
+                "provider": provider,
+                "error": msg,
+                "quota_exhausted": quota_hit,
+            }
 
         result = question_store.add_questions(records, source=self._IMAGE_SOURCE)
         log.info(
@@ -446,6 +452,7 @@ class Api:
         )
         return {
             "ok": True,
+            "provider": provider,
             "found": len(records),
             "added": result["added"],
             "skipped": result["skipped"],

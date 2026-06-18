@@ -103,7 +103,7 @@ Core app goals:
 - Desktop app for SSC CGL MCQ practice on macOS and Windows.
 - Bank + images mode works without any API key after image imports are saved.
 - Users can import subject-wise digital PDFs into a separate PDF practice source.
-- Users can import tagged questions from images through Gemini vision OCR.
+- Users can import tagged questions from images through the active provider's vision OCR (Gemini or Groq).
 - Users can optionally generate fresh SSC CGL-style questions through Groq/Gemini.
 - Timed quiz, per-question answer tracking, session history, charts, and review screen.
 

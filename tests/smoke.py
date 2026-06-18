@@ -298,7 +298,7 @@ def test_vision_import_helpers():
     from backend import pdf_processor
 
     # Empty image list returns no MCQs and never touches the network.
-    assert llm_client.extract_mcqs_from_images([], None, "fake-key") == []
+    assert llm_client.extract_mcqs_from_images([], None, "groq", "fake-key") == []
 
     # Extract prompt advertises the required schema keys.
     prompt = llm_client.build_extract_prompt("Quantitative Aptitude")
