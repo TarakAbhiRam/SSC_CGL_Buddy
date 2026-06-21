@@ -407,6 +407,32 @@ def parse_mcqs(
     return valid
 
 
+def _looks_like_mcq_payload(raw: str) -> bool:
+    """Lenient shape-check used only for API key testing.
+
+    Some providers may return a partial object during key tests (for example,
+    missing topic) even though the key itself is valid. We treat that as key OK
+    so users don't get a false "unparseable" error.
+    """
+    try:
+        parsed = _extract_json_array(raw)
+    except (ValueError, json.JSONDecodeError):
+        return False
+
+    items = _coerce_list(parsed)
+    if not items:
+        return False
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        question = item.get("question")
+        options = item.get("options")
+        if isinstance(question, str) and question.strip() and isinstance(options, list) and len(options) == 4:
+            return True
+    return False
+
+
 # --- Public entry point ------------------------------------------------------
 
 def generate_mcqs(
@@ -478,12 +504,12 @@ def test_api_key(provider: str, api_key: str) -> Dict[str, Any]:
     try:
         raw = _call_provider(
             'Return ONLY this JSON array: [{"question":"2+2?","options":["1","2","3","4"],'
-            '"correct_index":3,"category":"Math","difficulty":"easy","explanation":"2+2=4."}]',
+            '"correct_index":3,"category":"Quantitative Aptitude","topic":"Number System",'
+            '"difficulty":"easy","explanation":"2+2=4."}]',
             provider,
             api_key,
         )
-        mcqs = parse_mcqs(raw)
-        if mcqs:
+        if _looks_like_mcq_payload(raw):
             return {"ok": True, "message": f"{provider} key works."}
         return {"ok": False, "message": f"{provider} responded but output was unparseable."}
     except LLMError as exc:
