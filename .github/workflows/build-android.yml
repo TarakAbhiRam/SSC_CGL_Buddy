@@ -18,13 +18,16 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.13.0"
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
       - name: Install mobile dependencies
         working-directory: mobile
-        run: npm ci
+        run: |
+          node --version
+          npm --version
+          npm ci --engine-strict
 
       - name: Build and sync mobile web assets
         working-directory: mobile
@@ -34,7 +37,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -45,9 +48,14 @@ jobs:
 
       - name: Verify mobile Android SDK policy
         run: |
+          grep -q "node-version: \"22.13.0\"" .github/workflows/build-android.yml
+          grep -q "java-version: \"21\"" .github/workflows/build-android.yml
+          grep -q "gradle-8.14.3-all.zip" mobile/android/gradle/wrapper/gradle-wrapper.properties
+          grep -q "com.android.tools.build:gradle:8.13.0" mobile/android/build.gradle
           grep -q "minSdkVersion = 28" mobile/android/variables.gradle
           grep -q "targetSdkVersion = 36" mobile/android/variables.gradle
           grep -q "compileSdkVersion = 36" mobile/android/variables.gradle
+          grep -q "JavaVersion.VERSION_21" mobile/android/app/capacitor.build.gradle
 
       - name: Build debug APK
         working-directory: mobile/android

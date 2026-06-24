@@ -83,6 +83,8 @@ def verify_mobile_android_policy() -> None:
     workflow = (ROOT / ".github" / "workflows" / "build-android.yml").read_text(encoding="utf-8")
     for expected in (
         "actions/setup-node@v4",
+        'node-version: "22.13.0"',
+        'java-version: "21"',
         "cache-dependency-path: mobile/package-lock.json",
         "working-directory: mobile",
         "working-directory: mobile/android",
@@ -95,6 +97,22 @@ def verify_mobile_android_policy() -> None:
     for expected in ("minSdkVersion = 28", "targetSdkVersion = 36", "compileSdkVersion = 36"):
         if expected not in variables:
             fail(f"Mobile Android SDK policy missing {expected}")
+
+    capacitor_gradle = (ROOT / "mobile" / "android" / "app" / "capacitor.build.gradle").read_text(encoding="utf-8")
+    if "JavaVersion.VERSION_21" not in capacitor_gradle:
+        fail("Mobile Android Java policy missing JavaVersion.VERSION_21")
+
+    wrapper = (ROOT / "mobile" / "android" / "gradle" / "wrapper" / "gradle-wrapper.properties").read_text(encoding="utf-8")
+    if "gradle-8.14.3-all.zip" not in wrapper:
+        fail("Mobile Android Gradle wrapper policy missing Gradle 8.14.3")
+
+    android_gradle = (ROOT / "mobile" / "android" / "build.gradle").read_text(encoding="utf-8")
+    if "com.android.tools.build:gradle:8.13.0" not in android_gradle:
+        fail("Mobile Android Gradle plugin policy missing AGP 8.13.0")
+
+    package_json = (ROOT / "mobile" / "package.json").read_text(encoding="utf-8")
+    if '"node": ">=22.13.0"' not in package_json:
+        fail("Mobile package.json missing Node >=22.13.0 engine policy")
 
     required_files = [
         ROOT / "mobile" / "package.json",
