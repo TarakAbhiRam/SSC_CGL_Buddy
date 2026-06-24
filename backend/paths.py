@@ -22,6 +22,9 @@ def _bundle_root() -> Path:
     - Frozen (PyInstaller): the extraction dir ``sys._MEIPASS``.
     - Source run: the project root (parent of this ``backend`` package).
     """
+    android_bundle = os.environ.get("CGL_BUDDY_BUNDLE_ROOT")
+    if android_bundle:
+        return Path(android_bundle)
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
         return Path(meipass)
@@ -47,6 +50,11 @@ def user_data_dir() -> Path:
     """
     app_name = "CGL_Buddy"
     old_app_name = "SSC_MCQ"
+    android_data = os.environ.get("CGL_BUDDY_USER_DATA_DIR")
+    if android_data:
+        path = Path(android_data)
+        path.mkdir(parents=True, exist_ok=True)
+        return path
     if sys.platform.startswith("win"):
         base = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
     elif sys.platform == "darwin":

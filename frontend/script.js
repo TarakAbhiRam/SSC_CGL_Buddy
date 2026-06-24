@@ -33,7 +33,6 @@
   };
 
   const $ = (id) => document.getElementById(id);
-  const api = () => (window.pywebview && window.pywebview.api) || null;
   const THEME_STORAGE_KEY = "cgl_buddy_theme";
 
   function storedTheme() {
@@ -70,24 +69,41 @@
     setTheme(current === "dark" ? "light" : "dark", true);
   }
 
-  // pywebview injects the api asynchronously; wait for it.
-  function whenReady(cb) {
-    let fired = false;
-    const run = () => {
-      if (fired) return;
-      fired = true;
-      cb();
-    };
-    if (api()) return run();
-    window.addEventListener("pywebviewready", run, { once: true });
-    // Fallback poll in case the event was missed.
-    let tries = 0;
-    const t = setInterval(() => {
-      if (api() || tries++ > 50) {
-        clearInterval(t);
-        if (api()) run();
+  let viewportRefreshTimer = null;
+
+  function refreshViewportLayout() {
+    if (viewportRefreshTimer) clearTimeout(viewportRefreshTimer);
+    viewportRefreshTimer = setTimeout(() => {
+      viewportRefreshTimer = null;
+      if ($("view-quiz").classList.contains("active") && state.questions.length) {
+        renderGrid();
       }
-    }, 100);
+      Object.values(state.charts).forEach((chart) => {
+        if (chart && typeof chart.resize === "function") chart.resize();
+      });
+    }, 120);
+  }
+
+  // Initialize transport (PyWebView or HTTP) and start the app
+  async function initializeApp() {
+    try {
+      await transport.init();
+      await startApp();
+    } catch (error) {
+      console.error('[App] Failed to initialize transport:', error);
+      // Fallback: show error message to user
+      document.body.innerHTML = `<div style="padding: 20px; color: red;"><h2>Error</h2><p>Failed to connect to backend. Please restart the app.</p><pre>${error.message}</pre></div>`;
+    }
+  }
+
+  async function startApp() {
+    console.log('[App] Transport ready, starting...');
+    bind();
+    await loadCategories();
+    await restoreSettings();
+    setTheme(storedTheme(), false);
+    window.addEventListener("resize", refreshViewportLayout);
+    window.addEventListener("orientationchange", refreshViewportLayout);
   }
 
   function showView(name) {
@@ -106,12 +122,12 @@
     try {
       // Pull the SSC CGL taxonomy (subjects + subtopics) once.
       try {
-        const syl = await api().get_syllabus();
+        const syl = await transport.call('get_syllabus');
         state.syllabus = (syl && syl.topics) || {};
       } catch (e) {
         state.syllabus = {};
       }
-      const cats = await api().list_categories();
+      const cats = await transport.call('list_categories');
       const sel = $("category");
       const pdfSel = $("pdf-subject");
       sel.innerHTML = "";
@@ -177,7 +193,7 @@
 
   async function restoreSettings() {
     try {
-      const s = await api().get_settings();
+      const s = await transport.call('get_settings');
       const last = s.last_settings || {};
       if (last.category) $("category").value = last.category;
       if (last.difficulty) $("difficulty").value = last.difficulty;
@@ -262,7 +278,7 @@
     if (!p) return;
     $("active-provider").value = p;
     // Persist the choice so it sticks across restarts.
-    api().save_settings({ active_provider: p }).catch((e) => console.error(e));
+    transport.call('save_settings', { active_provider: p }).catch((e) => console.error(e));
   }
 
   function banner(targetId, message, kind = "warn") {
@@ -294,7 +310,7 @@
           return;
         }
       }
-      const res = await api().start_quiz(options);
+      const res = await transport.call('start_quiz', options);
       if (!res.ok) {
         banner("setup-banner", res.error || "Could not start quiz.", "warn");
         return;
@@ -534,7 +550,7 @@
       time_spent_seconds: state.times[idx] || 0,
     }));
     try {
-      const res = await api().submit_quiz(state.quizId, responses);
+      const res = await transport.call('submit_quiz', state.quizId, responses);
       if (!res.ok) {
         alert(res.error || "Could not score quiz.");
         state.submitting = false;
@@ -669,7 +685,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Adding…';
     try {
-      const res = await api().save_ai_questions(state.lastQuizId);
+      const res = await transport.call('save_ai_questions', state.lastQuizId);
       if (!res.ok) {
         $("save-ai-hint").textContent = res.error || "Could not add questions.";
         btn.style.display = "none";
@@ -809,7 +825,7 @@
   async function uploadPdf() {
     const status = $("upload-status");
     try {
-      const path = await api().pick_pdf();
+      const path = await transport.call('pick_pdf');
       if (!path) return;
       const subject = $("pdf-subject").value;
       if (!subject) {
@@ -819,7 +835,7 @@
       }
       status.className = "hint";
       status.innerHTML = '<span class="spinner"></span> Reading PDF into question bank…';
-      const res = await api().import_questions(path, { subject });
+      const res = await transport.call('import_questions', path, { subject });
       if (res.ok) {
         const added = res.added || 0;
         let msg = `Added ${added} question${added === 1 ? "" : "s"} from ${res.source} to the bank`;
@@ -841,14 +857,14 @@
   async function importQuestions() {
     const status = $("import-status");
     try {
-      const path = await api().pick_import_file();
+      const path = await transport.call('pick_import_file');
       if (!path) return;
       status.className = "hint";
       const isPdf = /\.pdf$/i.test(path);
       status.innerHTML = isPdf
         ? '<span class="spinner"></span> Reading PDF…'
         : '<span class="spinner"></span> Reading image with AI…';
-      const res = await api().import_questions(path);
+      const res = await transport.call('import_questions', path);
       if (res.ok) {
         const added = res.added || 0;
         let msg = `Imported ${added} new question${added === 1 ? "" : "s"} from ${res.source}`;
@@ -899,7 +915,7 @@
     const listEl = $("history-list");
     listEl.innerHTML = '<p class="hint"><span class="spinner"></span> Loading…</p>';
     try {
-      const res = await api().list_sessions();
+      const res = await transport.call('list_sessions');
       renderHistory((res && res.sessions) || []);
     } catch (e) {
       console.error(e);
@@ -1024,7 +1040,7 @@
   async function clearHistory() {
     if (!confirm("Delete all saved session history from this computer?")) return;
     try {
-      await api().clear_sessions();
+      await transport.call('clear_sessions');
       renderHistory([]);
     } catch (e) {
       console.error(e);
@@ -1037,7 +1053,7 @@
     showView("database");
     $("db-summary").innerHTML = '<p class="hint"><span class="spinner"></span> Loading…</p>';
     try {
-      const ov = await api().db_overview();
+      const ov = await transport.call('db_overview');
       renderDbOverview(ov);
     } catch (e) {
       console.error(e);
@@ -1051,7 +1067,7 @@
     // Always refresh the overview so the filter dropdowns pick up any sources
     // added since last time (e.g. freshly imported scan/image questions).
     try {
-      renderDbOverview(await api().db_overview());
+      renderDbOverview(await transport.call('db_overview'));
     } catch (e) { /* non-fatal */ }
     await loadDbQuestions();
   }
@@ -1099,7 +1115,7 @@
     const listEl = $("db-questions");
     listEl.innerHTML = '<p class="hint"><span class="spinner"></span> Loading…</p>';
     try {
-      const res = await api().list_db_questions(subject, source);
+      const res = await transport.call('list_db_questions', subject, source);
       renderDbQuestions(res);
     } catch (e) {
       console.error(e);
@@ -1141,7 +1157,7 @@
     if (!id) return;
     if (!confirm("Remove this question from your database?\n\nThis cannot be undone.")) return;
     try {
-      const res = await api().delete_db_question(id);
+      const res = await transport.call('delete_db_question', id);
       if (!res.ok) { alert(res.error || "Could not remove the question."); return; }
       // Reload the current filter view so counts stay accurate.
       await loadDbQuestions();
@@ -1155,7 +1171,7 @@
     if (!source) return;
     if (!confirm(`Delete ALL questions from "${source}"?\n\nThis permanently removes these questions from your database and cannot be undone.`)) return;
     try {
-      const res = await api().delete_db_source(source);
+      const res = await transport.call('delete_db_source', source);
       if (!res.ok) { alert(res.error || "Could not delete."); return; }
       await openDatabase();
     } catch (e) {
@@ -1167,10 +1183,10 @@
   async function importDatabase() {
     const statusEl = $("db-transfer-status");
     try {
-      const file = await api().pick_database_import_file();
+      const file = await transport.call('pick_database_import_file');
       if (!file) return;
       statusEl.innerHTML = '<span class="spinner"></span> Importing database…';
-      const res = await api().import_database(file);
+      const res = await transport.call('import_database', file);
       if (!res.ok) {
         statusEl.textContent = res.error || "Could not import that database.";
         return;
@@ -1187,7 +1203,7 @@
     const statusEl = $("db-transfer-status");
     try {
       statusEl.innerHTML = '<span class="spinner"></span> Preparing database…';
-      const res = await api().export_database();
+      const res = await transport.call('export_database');
       if (res.cancelled) {
         statusEl.textContent = "";
         return;
@@ -1219,7 +1235,7 @@
       auto_save_ai: $("auto-save-ai").checked,
     };
     try {
-      const s = await api().save_settings(payload);
+      const s = await transport.call('save_settings', payload);
       $("groq-key").value = "";
       $("gemini-key").value = "";
       reflectKeyStatus("groq", s.has_groq_key);
@@ -1239,7 +1255,7 @@
     const provider = ev.target.dataset.provider;
     if (!confirm("Delete the saved " + provider + " API key from this computer?")) return;
     try {
-      const s = await api().delete_api_key(provider);
+      const s = await transport.call('delete_api_key', provider);
       $(provider + "-key").value = "";
       reflectKeyStatus(provider, provider === "groq" ? s.has_groq_key : s.has_gemini_key);
       state.keys = { groq: !!s.has_groq_key, gemini: !!s.has_gemini_key };
@@ -1258,7 +1274,7 @@
     statusEl.className = "key-status";
     statusEl.innerHTML = '<span class="spinner"></span> Testing…';
     try {
-      const res = await api().test_api_key(provider, key);
+      const res = await transport.call('test_api_key', provider, key);
       statusEl.textContent = res.message;
       statusEl.className = "key-status " + (res.ok ? "ok" : "bad");
     } catch (e) {
@@ -1315,10 +1331,5 @@
     document.querySelectorAll(".delete-key").forEach((b) => b.addEventListener("click", deleteKey));
   }
 
-  whenReady(async () => {
-    setTheme(storedTheme(), false);
-    bind();
-    await loadCategories();
-    await restoreSettings();
-  });
+  initializeApp();
 })();

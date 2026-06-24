@@ -1,0 +1,13 @@
+# Android runtime dependencies for Chaquopy.
+# Keep desktop-only packages (pywebview, PyInstaller helpers) out of the APK.
+fastapi==0.110.0
+uvicorn==0.27.0
+
+PyMuPDF==1.24.9
+
+# LLM providers
+google-generativeai==0.8.6
+groq==0.37.1
+
+# Utilities
+tenacity==8.5.0

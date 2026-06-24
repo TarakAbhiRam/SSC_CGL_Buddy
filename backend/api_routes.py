@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -525,12 +526,24 @@ class Api:
 
     def export_database(self) -> Dict[str, Any]:
         """Save the user's writable question database as portable JSON."""
+        default_name = f"cgl-buddy-database-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
+
+        if os.environ.get("CGL_BUDDY_USER_DATA_DIR"):
+            path = Path(os.environ["CGL_BUDDY_USER_DATA_DIR"]) / default_name
+            payload = question_store.export_payload()
+            try:
+                path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            except OSError as exc:
+                log.warning("export_database failed for %s: %s", path, exc)
+                return {"ok": False, "error": "Could not save the database file."}
+            log.info("export_database %s: %d questions", path.name, payload["question_count"])
+            return {"ok": True, "path": str(path), "exported": payload["question_count"]}
+
         import webview
 
         windows = webview.windows
         if not windows:
             return {"ok": False, "error": "No app window is available."}
-        default_name = f"cgl-buddy-database-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
         result = windows[0].create_file_dialog(
             webview.SAVE_DIALOG,
             save_filename=default_name,

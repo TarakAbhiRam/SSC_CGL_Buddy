@@ -1,12 +1,14 @@
 # --- App runtime ---
 pywebview==5.3.2          # native desktop window wrapping local HTML/JS
+fastapi==0.110.0          # HTTP API server (for Android/Capacitor + testing)
+uvicorn==0.27.0           # ASGI server for FastAPI
 
 # --- PDF parsing ---
 PyMuPDF==1.24.9                # 'fitz' - digital PDF text extraction
 
 # --- LLM providers ---
 google-generativeai==0.8.6     # Gemini (>=0.8.3 needed for gemini-2.5-flash)
-groq==1.4.0                    # Groq (>=0.11 needed for httpx 0.28 compatibility)
+groq==0.37.1                    # Groq (compatible with httpx)
 
 # --- Utilities ---
 tenacity==8.5.0                # retry/backoff for LLM calls

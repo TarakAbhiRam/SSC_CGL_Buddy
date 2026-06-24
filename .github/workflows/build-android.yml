@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["main"]
+  workflow_dispatch: {}
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: current
+
+      - name: Verify Android SDK policy
+        run: |
+          grep -q "cglBuddyMinSdk=28" android/gradle.properties
+          grep -q "cglBuddyTargetSdk=36" android/gradle.properties
+
+      - name: Build debug APK
+        run: gradle -p android :app:assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CGL_Buddy_Android_Debug_APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

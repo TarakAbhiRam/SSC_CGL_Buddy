@@ -1,7 +1,7 @@
 # CGL Buddy
 
-CGL Buddy is your SSC CGL practice companion: a lightweight desktop app for
-macOS and Windows that helps aspirants practise from the built-in bank, import
+CGL Buddy is your SSC CGL practice companion: a lightweight app for
+macOS, Windows, and Android that helps aspirants practise from the built-in bank, import
 subject-wise PDF questions, generate fresh AI MCQs, take timed quizzes, and
 track performance.
 
@@ -61,6 +61,10 @@ Paste the key into the app's **Settings** screen and click **Test key**. That's 
 PyWebView desktop window → vanilla HTML/CSS/JS frontend → Python backend → JSON-backed
 question bank → PyMuPDF PDF parser → optional Groq/Gemini calls → timed quiz → analysis.
 
+Android uses the same frontend and backend contract: Android WebView → shared
+frontend transport adapter → local HTTP bridge → Python backend. Platform-specific
+code stays in thin host adapters so Windows development remains unchanged.
+
 ### Current lightweight runtime
 
 Included in the normal app runtime:
@@ -86,6 +90,14 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Optional shared-backend modes:
+```bash
+python run.py --desktop          # same desktop behavior as python main.py
+python run.py --http             # local HTTP API bridge for testing
+python run.py --both             # desktop app plus HTTP bridge
+python scripts/verify_platform_contract.py
+```
+
 ### Project layout
 ```
 main.py            PyWebView entry point + bundled-path resolution
@@ -93,8 +105,9 @@ backend/           config, PDF parsing, LLM client, quiz engine, analysis, API b
 scripts/           OFFLINE prep helpers / legacy prep scripts
 frontend/          index/setup/quiz/analysis HTML + style.css + script.js
 data/              mcq_bank.json (shipped built-in bank) + optional dev data
-.github/workflows/ build-windows.yml, build-macos.yml
-build/             build_mac.sh, build_win.bat
+.github/workflows/ build-windows.yml, build-macos.yml, build-android.yml
+android/           Android WebView + Chaquopy host (API 28+)
+build/             build_mac.sh, build_win.bat, build_android.sh/.bat
 ```
 
 ### Product scope
@@ -150,9 +163,10 @@ included GitHub Actions workflows.
 
 - `.github/workflows/build-windows.yml` builds `CGL_Buddy_Windows.zip` on `windows-latest`.
 - `.github/workflows/build-macos.yml` builds `CGL_Buddy_macOS.zip` on `macos-latest`.
+- `.github/workflows/build-android.yml` builds `app-debug.apk` on `ubuntu-latest`.
 
-Both workflows install the lightweight runtime requirements and package the app with
-PyInstaller.
+The desktop workflows install the lightweight runtime requirements and package the app with
+PyInstaller. The Android workflow builds the WebView/Chaquopy APK path.
 
 ### Manual Windows Build
 ```bat
@@ -199,6 +213,46 @@ bash build/build_mac.sh
 ```
 Output: `dist/CGL Buddy/CGL Buddy.app`.
 
+---
+
+## Building Android APK
+
+Android support is layered on top of the shared frontend/backend. It does not
+replace the Windows/macOS workflow.
+
+SDK policy:
+- Minimum SDK: Android 9 / API 28.
+- Target SDK: latest configured release SDK (`cglBuddyTargetSdk=36`).
+- Compile SDK: aligned with target SDK (`cglBuddyCompileSdk=36`).
+- Autorotate: allowed; the Android activity handles orientation and screen-size
+  changes without recreating the WebView, so quiz state/timer are preserved.
+
+Manual Android build on macOS/Linux:
+```bash
+bash build/build_android.sh
+```
+
+Manual Android build on Windows:
+```bat
+build\build_android.bat
+```
+
+Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+Android implementation notes:
+- `android/app/src/main/java/com/cglbuddy/app/MainActivity.kt` hosts the shared
+  frontend in Android WebView.
+- `android/app/src/main/python/android_entry.py` starts the Python HTTP backend
+  inside the app process.
+- `requirements-android.txt` keeps desktop-only packages out of the APK while
+  including the runtime dependencies needed for bank, PDF, image, AI, history,
+  database import/export, and analysis flows.
+- Selected PDFs/images/database files are copied into Android app storage before
+  being passed to the shared Python importer.
+
+The local machine needs Android Studio or Gradle plus the Android SDK installed
+to produce an APK. GitHub Actions installs those tools automatically.
+
 ### Lightweight packaging rule
 
 Do not add `--collect-all chromadb`, `--collect-all sentence_transformers`, or PyTorch to the
@@ -215,8 +269,10 @@ the main source of high RAM and large package size.
 
 ### Verification checklist
 
+- `python scripts/verify_platform_contract.py` passes.
 - `python -m tests.smoke` passes.
 - App launches locally with `python main.py`.
+- Android debug APK builds with `bash build/build_android.sh` or GitHub Actions.
 - Bank + images quiz works with no API key.
 - PDF import adds subject-tagged questions to Database → Browse questions and PDF mode.
 - Image import shows a clear Gemini quota/API-key message when needed.
