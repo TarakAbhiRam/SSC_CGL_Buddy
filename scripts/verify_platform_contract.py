@@ -79,10 +79,40 @@ def verify_android_policy() -> None:
         fail(f"Android files missing: {', '.join(missing)}")
 
 
+def verify_mobile_android_policy() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "build-android.yml").read_text(encoding="utf-8")
+    for expected in (
+        "actions/setup-node@v4",
+        "cache-dependency-path: mobile/package-lock.json",
+        "working-directory: mobile",
+        "working-directory: mobile/android",
+        "./gradlew assembleDebug --warning-mode all",
+    ):
+        if expected not in workflow:
+            fail(f"Mobile Android workflow missing {expected}")
+
+    variables = (ROOT / "mobile" / "android" / "variables.gradle").read_text(encoding="utf-8")
+    for expected in ("minSdkVersion = 28", "targetSdkVersion = 36", "compileSdkVersion = 36"):
+        if expected not in variables:
+            fail(f"Mobile Android SDK policy missing {expected}")
+
+    required_files = [
+        ROOT / "mobile" / "package.json",
+        ROOT / "mobile" / "package-lock.json",
+        ROOT / "mobile" / "capacitor.config.ts",
+        ROOT / "mobile" / "android" / "gradlew",
+        ROOT / "mobile" / "android" / "app" / "build.gradle",
+    ]
+    missing = [str(path.relative_to(ROOT)) for path in required_files if not path.exists()]
+    if missing:
+        fail(f"Mobile Android files missing: {', '.join(missing)}")
+
+
 def main() -> None:
     verify_api_methods()
     verify_http_routes()
     verify_android_policy()
+    verify_mobile_android_policy()
     print("OK: platform contract, HTTP routes, and Android SDK policy are aligned.")
 
 

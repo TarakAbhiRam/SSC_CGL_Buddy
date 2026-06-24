@@ -3,7 +3,6 @@ name: Build Android APK
 on:
   push:
     tags: ["v*"]
-    branches: ["main"]
   workflow_dispatch: {}
 
 jobs:
@@ -15,6 +14,21 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Build and sync mobile web assets
+        working-directory: mobile
+        run: npm run sync
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -29,22 +43,19 @@ jobs:
         run: |
           sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: current
-
-      - name: Verify Android SDK policy
+      - name: Verify mobile Android SDK policy
         run: |
-          grep -q "cglBuddyMinSdk=28" android/gradle.properties
-          grep -q "cglBuddyTargetSdk=36" android/gradle.properties
+          grep -q "minSdkVersion = 28" mobile/android/variables.gradle
+          grep -q "targetSdkVersion = 36" mobile/android/variables.gradle
+          grep -q "compileSdkVersion = 36" mobile/android/variables.gradle
 
       - name: Build debug APK
-        run: gradle -p android :app:assembleDebug
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --warning-mode all
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: CGL_Buddy_Android_Debug_APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
