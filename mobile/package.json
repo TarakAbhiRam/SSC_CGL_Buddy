@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node scripts/copy-data.mjs && tsc && vite build",
     "sync": "npm run build && cap sync android",
     "preview": "vite preview"
   },
